@@ -11,9 +11,10 @@ from matplotlib import pyplot as plt
 
 
 #Getting the images
-img1=cv2.imread("image2.jpg")
+img1=cv2.imread("./images/straight/group5_correct/opencv_frame_0.png")
 img2=cv2.imread("image3.jpg")
 img3=cv2.imread("image4.jpg")
+
 
 #Transforming them into grey images
 img_rgb1 = cv2.cvtColor(img1, cv2.COLOR_BGR2RGB)
@@ -52,9 +53,9 @@ contours1,hierarchy1 = cv2.findContours(img_pro1,cv2.RETR_TREE, cv2.CHAIN_APPROX
 contours2,hierarchy2 = cv2.findContours(img_pro2,cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 contours3,hierarchy3 = cv2.findContours(img_pro3,cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
-cnt1 = contours1[0]
-cnt2 = contours2[0]
-cnt3 = contours3[0]
+cnt1 = contours1[1]
+cnt2 = contours1[2]
+cnt3 = contours2[0]
 
 #Matching the contours
 ret12 = cv2.matchShapes(cnt1,cnt2,1,0.0)
