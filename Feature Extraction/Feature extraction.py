@@ -20,7 +20,7 @@ def changeColor(img):
 
 
 #Getting the images
-img1=cv.imread("image1.png")
+img1=cv.imread("image5.png")
 
 
 #Transforming them into grey images
@@ -49,13 +49,17 @@ plt.show()
 contours1,hierarchy1 = cv.findContours(img_pro1,cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
 
 #Debugging
-#print('hierarchy',hierarchy1)
+print('hierarchy',hierarchy1)
 
 #Filter contours
 contour_filter=[]
 img_contour=img_rgb1.copy()
 for i,contour in enumerate(contours1):
     if hierarchy1[0][i][3]==-1:
+        cv.drawContours(img_contour, [contour], -1, (0,0,255), 2)  
+        contour_filter.append(contour)
+        
+    if hierarchy1[0][i][2]==-1:
         cv.drawContours(img_contour, [contour], -1, (0,0,255), 2)  
         contour_filter.append(contour)
         
