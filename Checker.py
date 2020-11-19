@@ -54,13 +54,13 @@ def FeatureExtraction(img_rgb,contour_filter,modelContour,defectContourList,isSt
         #Match Score
         match_score_list = []
         if isStraight:
-            tags = ["Train","Good Part", "Defect: Head Cut Off","Defect: Head Cut Off + Filled","Defect: Filled in","Defect: Cut in half"]
+            tags = ["Train","Good Part", "Defect: Head Cut Off","Defect: Head Cut Off + Filled","Defect: Filled in","Defect: Cut in half","Hole inside"]
             if perimeter<400 and perimeter>200 and area<6000 and area>4000 and aspect_ratio<0.6 and aspect_ratio>0.35:
                 match_score_list.append(0.00)
             else:
                 match_score_list.append(1.00)
         else:
-            tags = ["Good Part", "Defect: Filled in","Defect: Cut in half"]
+            tags = ["Good Part", "Defect: Filled in","Defect: Cut in half","Hole Inside"]
         
         if isStraight:
             match_score = cv.matchShapes(contour,modelContour,cv.CONTOURS_MATCH_I3,0)
@@ -84,10 +84,12 @@ def FeatureExtraction(img_rgb,contour_filter,modelContour,defectContourList,isSt
                 match_score_list.append(0.01)
             else:
                 match_score_list.append(1.00)
-            
-        #Display text on photo  
-        flag = np.argmin(match_score_list)
-        tag = tags[np.argmin(match_score_list)]
+        
+        #Check if there is a hole inside
+        if area<500:
+            tag = "Defect: Hole inside"
+        else:    
+            tag = tags[np.argmin(match_score_list)]
         
         if tag == "Good Part": 
             part_cx_list.append(cx)
@@ -100,7 +102,7 @@ def FeatureExtraction(img_rgb,contour_filter,modelContour,defectContourList,isSt
             defectCounter += 1
         
         
-        img = cv.putText(img_feature,tags[np.argmin(match_score_list)],(cx-50,cy+35),cv.FONT_HERSHEY_SIMPLEX ,0.3,(0,0,255),1,cv.LINE_AA)
+        img = cv.putText(img_feature,tag,(cx-50,cy+35),cv.FONT_HERSHEY_SIMPLEX ,0.3,(0,0,255),1,cv.LINE_AA)
         
     
     # Display extracted features
@@ -118,9 +120,12 @@ def FilterContours(img_rgb,contours,hierarchy):
     img_contour=img_rgb.copy()
     for i,contour in enumerate(contours):
         #Remove inside contours
-        if hierarchy[0][i][3]==-1:
+        if hierarchy[0][i][2]==-1:
             #Remove small and large contours
             if cv.contourArea(contour) > 1500 and cv.contourArea(contour)<15000:
+                cv.drawContours(img_contour, [contour], -1, (0,0,255), 2)  
+                contour_filter.append(contour)
+            if hierarchy[0][i][3]>=15:
                 cv.drawContours(img_contour, [contour], -1, (0,0,255), 2)  
                 contour_filter.append(contour)
     return contour_filter
@@ -168,7 +173,7 @@ def Check(isStraight, isLeft, isRight):
         
     for i in range (5):
         ksize=5
-        img=cv.imread("./images/curve_left/group5_defects/opencv_frame_"+str(2+i*7)+".png")
+        img=cv.imread("./images/straight/group5_defects/opencv_frame_"+str(28+i*7)+".png")
         if isRight:
             img=cv.flip(img, 0)
         img_rgb = cv.cvtColor(img, cv.COLOR_BGR2RGB)
@@ -193,7 +198,37 @@ def Check(isStraight, isLeft, isRight):
         elif goodPartCounter + defectCounter < 12:
             print('Missing Parts' + '\n')
             print("Fail")
-        
+        elif goodPartCounter + defectCounter < 13:
+            # Gather all non empty positions
+            nonEmpty_cx_list=part_cx_list+defects_cx_list
+            nonEmpty_cy_list=part_cy_list+defects_cy_list
+
+            # Remove the train position to get the parts grid
+            j = nonEmpty_cx_list.index(min(nonEmpty_cx_list))
+            cy2 = nonEmpty_cy_list[j]
+            nonEmpty_cx_list.pop(j)
+            nonEmpty_cy_list.pop(j)
+
+            #get coordinates of possible positions
+            cx1 = min(nonEmpty_cx_list)
+            cx2 = (max(nonEmpty_cx_list) - min(nonEmpty_cx_list))/2
+            cx3 = max(nonEmpty_cx_list)
+            cy1 = min(nonEmpty_cy_list)
+            #cy2 = min(nonEmpty_cy_list) + (max(nonEmpty_cy_list) - min(nonEmpty_cy_list))/3
+            cy3 = min(nonEmpty_cy_list) + 2*(max(nonEmpty_cy_list) - min(nonEmpty_cy_list))/3
+            cy4 = max(nonEmpty_cx_list)
+
+            num_emptySlots = 13 - (goodPartCounter + defectCounter)
+
+            #for emptySlot in range(num_emptySlots):
+
+
+
+            print(str(num_emptySlots) + ' missing Parts')
+            print("Fail" + '\n')
+            
+        print("Good Parts:" + str(goodPartCounter),"Defects:" + str(defectCounter))
+        print(part_cx_list,part_cy_list,defects_cx_list,defects_cy_list)
     
             
             
@@ -207,4 +242,4 @@ def Check(isStraight, isLeft, isRight):
         defects_cx_list=[]
         defects_cy_list=[]
         
-Check(0,1,0)
+Check(1,0,0)
