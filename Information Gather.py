@@ -32,6 +32,10 @@ def FeatureExtraction(img_rgb,contour_filter,straightContour):
     aspect_ratio_list=[]
     perimeter_list=[]
     match_score_list=[]
+    part_cx_list=[]
+    part_cy_list=[]
+    defects_cx_list=[]
+    defects_cy_list=[]
 
     img_feature=img_rgb.copy()
     
