@@ -19,7 +19,22 @@ itern=2
 kernel = np.ones((ksize,ksize),np.uint8)
 
 
+def captureImage():
+    #Init. camera
+    cam=cv.VideoCapture(0)
+    #Capture frame by frame
+    while True:
+        ret, frame = cam.read()       
+    #Save image by pressing space    
+        k = cv.waitKey(1)
+        if k%256 == 32:
+            cv.imwrite("Image.png",frame)
+            #Release the capture    
+            cam.release()
+            cv.destroyAllWindows()
 
+            return 0    
+        
 
 def FeatureExtraction(img_rgb,contour_filter,modelContour,defectContourList,isStraight):
     img_feature=img_rgb.copy()
@@ -91,17 +106,20 @@ def FeatureExtraction(img_rgb,contour_filter,modelContour,defectContourList,isSt
         else:    
             tag = tags[np.argmin(match_score_list)]
         
+        #Add coordinates of good parts
         if tag == "Good Part": 
             part_cx_list.append(cx)
             part_cy_list.append(cy)
             goodPartCounter += 1
             
+        #Add coordinates of defects    
         else:
-            defects_cx_list.append(cx)
-            defects_cy_list.append(cy)
-            defectCounter += 1
+            if tag != "Train":
+                defects_cx_list.append(cx)
+                defects_cy_list.append(cy)
+                defectCounter += 1
         
-        
+        #Display information on screen
         img = cv.putText(img_feature,tag,(cx-50,cy+35),cv.FONT_HERSHEY_SIMPLEX ,0.3,(0,0,255),1,cv.LINE_AA)
         
     
@@ -125,6 +143,7 @@ def FilterContours(img_rgb,contours,hierarchy):
             if cv.contourArea(contour) > 1500 and cv.contourArea(contour)<15000:
                 cv.drawContours(img_contour, [contour], -1, (0,0,255), 2)  
                 contour_filter.append(contour)
+            #Find holes inside parts    
             if hierarchy[0][i][3]>=15:
                 cv.drawContours(img_contour, [contour], -1, (0,0,255), 2)  
                 contour_filter.append(contour)
@@ -154,14 +173,15 @@ def Check(isStraight, isLeft, isRight):
         imgStraight = cv.imread("./shapes/straight_shape.png")
         imgDefect1 = cv.imread("./shapes/straight_defect_1.png")
         imgDefect2 = cv.imread("./shapes/straight_defect_2.png")
-        imgDefect3 = cv.imread("./shapes/straight_defect_3.png")
+        #imgDefect3 = cv.imread("./shapes/straight_defect_3.png")
         straightContour = getShape(imgStraight)
         defect1Contour =  getShape(imgDefect1)
         defect2Contour = getShape(imgDefect2)
-        defect3Contour = getShape(imgDefect3)
+        #defect3Contour = getShape(imgDefect3)
         defectContourList.append(defect1Contour)
         defectContourList.append(defect2Contour)
-        defectContourList.append(defect3Contour)
+        #defectContourList.append(defect3Contour)
+        """
     if isLeft or isRight:
         imgCurved = cv.imread("./shapes/curved_shape.png")
         imgDefect1 = cv.imread("./shapes/curved_defect_1.png")
@@ -170,10 +190,13 @@ def Check(isStraight, isLeft, isRight):
         defect1Contour =  getShape(imgDefect1)
         
         defectContourList.append(defect1Contour)
-        
-    for i in range (5):
+    """
+    #while True:    
+    for i in range (6):
         ksize=5
-        img=cv.imread("./images/straight/group5_defects/opencv_frame_"+str(28+i*7)+".png")
+        img=cv.imread("./images/straight/group5_defects/opencv_frame_"+str(i+36)+".png")
+        #captureImage()
+        #img=cv.imread("Image.png")
         if isRight:
             img=cv.flip(img, 0)
         img_rgb = cv.cvtColor(img, cv.COLOR_BGR2RGB)
@@ -196,8 +219,11 @@ def Check(isStraight, isLeft, isRight):
         elif goodPartCounter + defectCounter == 12:
             print("Fail")
         elif goodPartCounter + defectCounter < 12:
-            print('Missing Parts' + '\n')
-            print("Fail")
+            num_emptySlots = 12 - (goodPartCounter + defectCounter)
+            print(str(num_emptySlots) + ' missing Parts')
+            print("Fail" + '\n')
+            
+            """
         elif goodPartCounter + defectCounter < 13:
             # Gather all non empty positions
             nonEmpty_cx_list=part_cx_list+defects_cx_list
@@ -209,30 +235,17 @@ def Check(isStraight, isLeft, isRight):
             nonEmpty_cx_list.pop(j)
             nonEmpty_cy_list.pop(j)
 
-            #get coordinates of possible positions
-            cx1 = min(nonEmpty_cx_list)
-            cx2 = (max(nonEmpty_cx_list) - min(nonEmpty_cx_list))/2
-            cx3 = max(nonEmpty_cx_list)
-            cy1 = min(nonEmpty_cy_list)
-            #cy2 = min(nonEmpty_cy_list) + (max(nonEmpty_cy_list) - min(nonEmpty_cy_list))/3
-            cy3 = min(nonEmpty_cy_list) + 2*(max(nonEmpty_cy_list) - min(nonEmpty_cy_list))/3
-            cy4 = max(nonEmpty_cx_list)
-
-            num_emptySlots = 13 - (goodPartCounter + defectCounter)
-
-            #for emptySlot in range(num_emptySlots):
-
-
-
+            num_emptySlots = 12 - (goodPartCounter + defectCounter)
             print(str(num_emptySlots) + ' missing Parts')
             print("Fail" + '\n')
             
+            """
         print("Good Parts:" + str(goodPartCounter),"Defects:" + str(defectCounter))
         print(part_cx_list,part_cy_list,defects_cx_list,defects_cy_list)
     
             
             
-        
+        """
         #Reset conters and lists to hold coord. of good parts and defects
         goodPartCounter = 0
         defectCounter = 0
@@ -241,5 +254,6 @@ def Check(isStraight, isLeft, isRight):
         part_cy_list=[]
         defects_cx_list=[]
         defects_cy_list=[]
+        """
         
 Check(1,0,0)
