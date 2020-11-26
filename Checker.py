@@ -12,12 +12,76 @@ from matplotlib import pyplot as plt
 ds=12
 minStraightArea = 6282.0
 minStraightPerimeter = 453.44
-minCurvedArea = 9101.0
-minCurvedPerimeter = 551.65
+minCurvedArea = 8879.5
+minCurvedPerimeter = 541.65
 ksize=3
 itern=2
 kernel = np.ones((ksize,ksize),np.uint8)
+cropping_cy_straight=[35,130,225,320]
+cropping_cy_length_straight=95
+cropping_cx_straight=[110,280,450]
+cropping_cx_length_straight=170
 
+cropping_cy_curved=[50,145,240,335]
+cropping_cy_length_curved=95
+cropping_cx_curved=[30,230,430]
+cropping_cx_length_curved=200
+
+
+def testCamera(img):
+    for itemx in cropping_cx_straight:
+        for itemy in cropping_cy_straight:
+            img=cv.rectangle(img,(itemx,itemy),(itemx + cropping_cx_length_straight, itemy + cropping_cy_length_straight),(255,0,0),5)
+    img=cv.rectangle(img,(20,180),(100,350),(255,0,0),5)
+    plt.figure(figsize = (ds,ds))
+    plt.imshow(img)
+    plt.axis('off')
+    plt.show()  
+    
+def testCameraCurved(img):
+    for itemx in cropping_cx_curved:
+        for itemy in cropping_cy_curved:
+            img=cv.rectangle(img,(itemx,itemy),(itemx + cropping_cx_length_curved, itemy + cropping_cy_length_curved),(255,0,0),5)
+    plt.figure(figsize = (ds,ds))
+    plt.imshow(img)
+    plt.axis('off')
+    plt.show()
+    
+def cropStraightImage(img):
+    position_x=0
+    position_y=0
+    for itemx in cropping_cx_straight:
+        position_x += 1
+        for itemy in cropping_cy_straight:
+            position_y %= 4
+            position_y += 1
+            img_cropped=img[itemy:itemy+cropping_cy_length_straight,itemx:itemx+cropping_cx_length_straight]
+            avg_color_per_row = np.average(img_cropped, axis=0)
+            avg_color = np.average(avg_color_per_row, axis=0)
+            if avg_color[0]>80 and avg_color[1]>80 and avg_color[2]>80:
+                tag, goodPart = Check(img_cropped,1,0,0)
+            else:
+                tag="Empty"
+                goodPart = False
+            print("Y: " + str(position_y) + "; X: " + str(position_x) + "; Tag: " + str(tag) + "; Pass: " + str(goodPart))
+
+def cropCurvedImage(img,isLeft):
+    position_x=0
+    position_y=0
+    for itemx in cropping_cx_curved:
+        position_x += 1
+        for itemy in cropping_cy_curved:
+            position_y %= 4
+            position_y += 1
+            img_cropped=img[itemy:itemy+cropping_cy_length_curved,itemx:itemx+cropping_cx_length_curved]
+            avg_color_per_row = np.average(img_cropped, axis=0)
+            avg_color = np.average(avg_color_per_row, axis=0)
+            if avg_color[0]>80 and avg_color[1]>80 and avg_color[2]>80:
+                tag, goodPart = Check(img_cropped,0,isLeft, not isLeft)
+            else:
+                tag="Empty"
+                goodPart = False
+            print("Y: " + str(position_y) + "; X: " + str(position_x) + "; Tag: " + str(tag) + "; Pass: " + str(goodPart))
 
 def captureImage():
     #Init. camera
@@ -35,20 +99,13 @@ def captureImage():
 
             return 0    
         
-
-def FeatureExtraction(img_rgb,contour_filter,modelContour,defectContourList,isStraight):
+def FeatureExtraction(img_rgb,contour_filter,contourList,tagList,isStraight,hole):
     img_feature=img_rgb.copy()
     
-    #Initialize local Counters and lists to hold coord. of good parts and defects
-    goodPartCounter = 0
-    defectCounter = 0
-
-    part_cx_list=[]
-    part_cy_list=[]
-    defects_cx_list=[]
-    defects_cy_list=[]
-
-    for i,contour in enumerate(contour_filter):
+    #for i,contour in enumerate(contour_filter):
+    for i in range(1):
+        contour = contour_filter[0]
+        tag=""
         #center of an object
         M = cv.moments(contour)
         if M["m00"] != 0:
@@ -68,192 +125,138 @@ def FeatureExtraction(img_rgb,contour_filter,modelContour,defectContourList,isSt
         
         #Match Score
         match_score_list = []
-        if isStraight:
-            tags = ["Train","Good Part", "Defect: Head Cut Off","Defect: Head Cut Off + Filled","Defect: Filled in","Defect: Cut in half","Hole inside"]
-            if perimeter<400 and perimeter>200 and area<6000 and area>4000 and aspect_ratio<0.6 and aspect_ratio>0.35:
-                match_score_list.append(0.00)
-            else:
-                match_score_list.append(1.00)
-        else:
-            tags = ["Good Part", "Defect: Filled in","Defect: Cut in half","Hole Inside"]
         
-        if isStraight:
-            match_score = cv.matchShapes(contour,modelContour,cv.CONTOURS_MATCH_I3,0)
-        else:
-            match_score = cv.matchShapes(contour,modelContour,cv.CONTOURS_MATCH_I1,0)            
-        match_score_list.append(match_score)
+        if hole:
+            tag="Hole inside"
         
-        for j in defectContourList:
+        if tag=="":
+            if isStraight:            
+                if perimeter<400 and perimeter>200 and area<6000 and area>4000 and aspect_ratio<0.6 and aspect_ratio>0.35:
+                    tag = "Train"
+        
+        if tag=="":
             if isStraight:
-                defect_match_score = cv.matchShapes(contour,j,cv.CONTOURS_MATCH_I3,0)
+                if area < 0.70 * minStraightArea and perimeter < 0.70 * minStraightPerimeter:
+                    tag="Cut in half"
             else:
-                defect_match_score = cv.matchShapes(contour,j,cv.CONTOURS_MATCH_I1,0)                
-            match_score_list.append(defect_match_score)
-        if isStraight:
-            if area < 0.70 * minStraightArea and perimeter < 0.70 * minStraightPerimeter:
-                match_score_list.append(0.01)
+                if area < 0.70 * minCurvedArea and perimeter < 0.90 * minCurvedPerimeter:
+                    tag="Cut in half"
+        
+        if tag=="":
+            for item in contourList:
+                if isStraight:
+                    match_score = cv.matchShapes(contour, item, cv.CONTOURS_MATCH_I3,0)
+                else:
+                    match_score = cv.matchShapes(contour, item, cv.CONTOURS_MATCH_I1,0)
+                match_score_list.append(match_score)
+            if area<500:
+                tag= "Defect: Hole inside"
             else:
-                match_score_list.append(1.00)
-        else:
-            if area < 0.70 * minCurvedArea and perimeter < 0.70 * minCurvedPerimeter:
-                match_score_list.append(0.01)
-            else:
-                match_score_list.append(1.00)
-        
-        #Check if there is a hole inside
-        if area<500:
-            tag = "Defect: Hole inside"
-        else:    
-            tag = tags[np.argmin(match_score_list)]
-        
-        #Add coordinates of good parts
-        if tag == "Good Part": 
-            part_cx_list.append(cx)
-            part_cy_list.append(cy)
-            goodPartCounter += 1
-            
-        #Add coordinates of defects    
-        else:
-            if tag != "Train":
-                defects_cx_list.append(cx)
-                defects_cy_list.append(cy)
-                defectCounter += 1
-        
-        #Display information on screen
+                tag=tagList[np.argmin(match_score_list)]
+    
         img = cv.putText(img_feature,tag,(cx-50,cy+35),cv.FONT_HERSHEY_SIMPLEX ,0.3,(0,0,255),1,cv.LINE_AA)
         
     
     # Display extracted features
-    plt.figure(figsize = (ds,ds))
-    plt.imshow(img_feature)
-    plt.axis('off')
-    plt.show()    
-
-    return part_cx_list,part_cy_list,defects_cx_list,defects_cy_list,goodPartCounter,defectCounter
-
-
+    #plt.figure(figsize = (ds,ds))
+    #plt.imshow(img_feature)
+    #plt.axis('off')
+    #plt.show()    
+    if tag == "Good Part":
+        goodPart = True
+    else:
+        goodPart = False
+    return tag, goodPart
 
 def FilterContours(img_rgb,contours,hierarchy):
     contour_filter=[]
+    hole=False
     img_contour=img_rgb.copy()
     for i,contour in enumerate(contours):
         #Remove inside contours
-        if hierarchy[0][i][2]==-1:
+        if hierarchy[0][i][3]==-1:
             #Remove small and large contours
             if cv.contourArea(contour) > 1500 and cv.contourArea(contour)<15000:
-                cv.drawContours(img_contour, [contour], -1, (0,0,255), 2)  
+                cv.drawContours(img_contour, [contour], -1, (0,0,255), 2) 
                 contour_filter.append(contour)
             #Find holes inside parts    
-            if hierarchy[0][i][3]>=15:
-                cv.drawContours(img_contour, [contour], -1, (0,0,255), 2)  
-                contour_filter.append(contour)
-    return contour_filter
+        if hierarchy[0][i][3]!=-1 and cv.contourArea(contour) > 100:
+            hole=True
+            cv.drawContours(img_contour, [contour], -1, (0,0,255), 2)
+    return contour_filter, hole
 
-
-def getShape(imgStraight):
+def getShape(img):
     ksize=5
-    img_rgb = cv.cvtColor(imgStraight, cv.COLOR_BGR2RGB)
+    img_rgb = cv.cvtColor(img, cv.COLOR_BGR2RGB)
     img_grey = cv.cvtColor(img_rgb, cv.COLOR_RGB2GRAY)
     img_grey_blur = cv.GaussianBlur(img_grey,(ksize,ksize),0)
     ret,img_otsu = cv.threshold(img_grey_blur,0,255,cv.THRESH_BINARY+cv.THRESH_OTSU) 
     contours,hierarchy = cv.findContours(img_otsu,cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
-    plt.figure(figsize = (ds,ds))
-    plt.imshow(img_otsu)
-    plt.axis('off')
-    plt.show()  
     for i,contour in enumerate(contours):
         if hierarchy[0][i][3]==-1:
             return contour
 
-
-#Main Function
-def Check(isStraight, isLeft, isRight):
-    defectContourList = []
+def readContours(isStraight):
+    contourList = []
     if isStraight:
         imgStraight = cv.imread("./shapes/straight_shape.png")
         imgDefect1 = cv.imread("./shapes/straight_defect_1.png")
         imgDefect2 = cv.imread("./shapes/straight_defect_2.png")
-        #imgDefect3 = cv.imread("./shapes/straight_defect_3.png")
+        imgDefect3 = cv.imread("./shapes/straight_defect_3.png")
         straightContour = getShape(imgStraight)
         defect1Contour =  getShape(imgDefect1)
         defect2Contour = getShape(imgDefect2)
-        #defect3Contour = getShape(imgDefect3)
-        defectContourList.append(defect1Contour)
-        defectContourList.append(defect2Contour)
-        #defectContourList.append(defect3Contour)
-        """
-    if isLeft or isRight:
+        defect3Contour = getShape(imgDefect3)
+        contourList.append(straightContour)
+        contourList.append(defect1Contour)
+        contourList.append(defect2Contour)
+        contourList.append(defect3Contour)
+        tagList = ["Good Part", "Defect: Head Cut Off","Defect: Head Cut Off + Filled","Defect: Filled in"]
+    else:
         imgCurved = cv.imread("./shapes/curved_shape.png")
+        imgStraight = cv.imread("./shapes/straight_shape.png")
         imgDefect1 = cv.imread("./shapes/curved_defect_1.png")
         
         curvedContour = getShape(imgCurved)
+        straightContour = getShape(imgStraight)
         defect1Contour =  getShape(imgDefect1)
         
-        defectContourList.append(defect1Contour)
-    """
-    #while True:    
-    for i in range (6):
-        ksize=5
-        img=cv.imread("./images/straight/group5_defects/opencv_frame_"+str(i+36)+".png")
-        #captureImage()
-        #img=cv.imread("Image.png")
-        if isRight:
-            img=cv.flip(img, 0)
-        img_rgb = cv.cvtColor(img, cv.COLOR_BGR2RGB)
-        img_grey = cv.cvtColor(img_rgb, cv.COLOR_RGB2GRAY)
-        img_grey_blur = cv.GaussianBlur(img_grey,(ksize,ksize),0)
-        ret,img_otsu = cv.threshold(img_grey_blur,0,255,cv.THRESH_BINARY+cv.THRESH_OTSU)
-        img_pro=cv.morphologyEx(img_otsu, cv.MORPH_OPEN, kernel)
-        plt.figure(figsize = (ds,ds))
-        plt.imshow(img_pro)
-        plt.axis('off')
-        plt.show() 
-        contours,hierarchy = cv.findContours(img_pro,cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
-        contour_filter = FilterContours(img_rgb, contours, hierarchy)
-        if isStraight:
-            part_cx_list,part_cy_list,defects_cx_list,defects_cy_list,goodPartCounter,defectCounter = FeatureExtraction(img_rgb,contour_filter,straightContour,defectContourList,isStraight)
-        else:
-            part_cx_list,part_cy_list,defects_cx_list,defects_cy_list,goodPartCounter,defectCounter = FeatureExtraction(img_rgb,contour_filter,curvedContour,defectContourList,isStraight)
-        if goodPartCounter == 12:
-            print("Pass")
-        elif goodPartCounter + defectCounter == 12:
-            print("Fail")
-        elif goodPartCounter + defectCounter < 12:
-            num_emptySlots = 12 - (goodPartCounter + defectCounter)
-            print(str(num_emptySlots) + ' missing Parts')
-            print("Fail" + '\n')
-            
-            """
-        elif goodPartCounter + defectCounter < 13:
-            # Gather all non empty positions
-            nonEmpty_cx_list=part_cx_list+defects_cx_list
-            nonEmpty_cy_list=part_cy_list+defects_cy_list
-
-            # Remove the train position to get the parts grid
-            j = nonEmpty_cx_list.index(min(nonEmpty_cx_list))
-            cy2 = nonEmpty_cy_list[j]
-            nonEmpty_cx_list.pop(j)
-            nonEmpty_cy_list.pop(j)
-
-            num_emptySlots = 12 - (goodPartCounter + defectCounter)
-            print(str(num_emptySlots) + ' missing Parts')
-            print("Fail" + '\n')
-            
-            """
-        print("Good Parts:" + str(goodPartCounter),"Defects:" + str(defectCounter))
-        print(part_cx_list,part_cy_list,defects_cx_list,defects_cy_list)
-    
-            
-            
-        """
-        #Reset conters and lists to hold coord. of good parts and defects
-        goodPartCounter = 0
-        defectCounter = 0
-
-        part_cx_list=[]
-        part_cy_list=[]
-        defects_cx_list=[]
-        defects_cy_list=[]
-        """
+        contourList.append(curvedContour)
+        contourList.append(straightContour)
+        contourList.append(defect1Contour)
         
-Check(1,0,0)
+        tagList=["Good Part", "Defect: Wrong Shape","Defect: Filled in"]
+    return contourList, tagList
+
+def getContour(img_rgb):
+    img_grey = cv.cvtColor(img_rgb, cv.COLOR_RGB2GRAY)
+    img_grey_blur = cv.GaussianBlur(img_grey,(ksize,ksize),0)
+    ret,img_otsu = cv.threshold(img_grey_blur,0,255,cv.THRESH_BINARY+cv.THRESH_OTSU)
+    img_pro=cv.morphologyEx(img_otsu, cv.MORPH_OPEN, kernel)
+    return cv.findContours(img_pro,cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+
+#Main Function
+def Check(img, isStraight, isLeft, isRight):
+    contourList,tagList = readContours(isStraight)
+    if isRight:
+        img=cv.flip(img, 0)
+    img_rgb = cv.cvtColor(img, cv.COLOR_BGR2RGB)
+    contours, hierarchy = getContour(img_rgb)
+    contour_filter,hole = FilterContours(img_rgb, contours, hierarchy)
+    return FeatureExtraction(img_rgb,contour_filter,contourList,tagList,isStraight,hole)
+
+
+
+for i in range (1):
+    
+   img=cv.imread("./images/group5_defects_2/opencv_frame_"+str(i+8)+".png")
+   img_rgb = cv.cvtColor(img, cv.COLOR_BGR2RGB)
+   plt.figure(figsize = (ds,ds))
+   plt.imshow(img_rgb)
+   plt.axis('off')
+   plt.show()       
+   print("------------------------------------")
+   #cropStraightImage(img_rgb)
+   cropCurvedImage(img_rgb, True)
+   #testCamera(img_rgb)
+   #testCameraCurved(img_rgb)
