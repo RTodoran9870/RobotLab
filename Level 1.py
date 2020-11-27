@@ -10,7 +10,7 @@ from matplotlib import pyplot as plt
 #from gpio import LED
 #from gpio import Button
 
-
+img_count=1
 ds=12
 #Precalibrating ethalons
 minStraightArea = 6282.0
@@ -32,43 +32,56 @@ cropping_cy_length_curved=95
 cropping_cx_curved=[30,230,430]
 cropping_cx_length_curved=200
 
-#R.Pi pins and defaul states
 
+#Rasberri Pi pins settings
+#Relay
+#obit1=LED(14,False)
+#Good or bad batch
+#obit2=LED(15,False)
+#ibit1=Button(5,False)
 
 
 def plcOutput(Pass):
     #Set R.P. pins as boolean outputs 
-    #bit1=LED(14,False)
-    #bit2=LED(15,False)
-    #bit3=LED(18,False)
-    #bit4=LED(23) 
-    
+      
     if Pass:
         #bit1.on()
-        #bit2.off()
-        #bit3.off()
+        #bit2.on()
         print("Good batch")
         
     else:
-        #bit1.off()
+        #bit1.on()
         #bit2.off()
-        #bit3.off()
         print("Batch rejected")
         
     return 0
     
     
-"""   
-def plcInout():
+  
+def plcInput(img_num):
     #Set pins as boolean inputs
-    #bit1=Button(5,False)
-    #bit2=Button(6,False)
-    #bit3=Button(13,False)
+    #ibit1=Button(5,False)
+    """
+    #if(ibit1):
+        # Begin inspection on batch
+        # Initialize pass value (default true) 
+        Pass=True 
+        #captureImage(img_num)
+        img=cv.imread("./group5_test_images/opencv_frame_"+str(img_num)+".png") 
+        #img=cv.imread("./group5_defects_2/opencv_frame_"+str(i+8)+".png")
+        img_rgb = cv.cvtColor(img, cv.COLOR_BGR2RGB)
+        #print("image read")
+        
+        Pass=cropStraightImage(img_rgb)
+        #testCamera(img_rgb)
+
+        #print(Pass)
+        plcOutput(Pass)
+        img_num+=1
+    """
+    return img_num
+ 
     
-    if():
-        return 
-    
-"""
 def testCamera(img):
     for itemx in cropping_cx_straight:
         for itemy in cropping_cy_straight:
@@ -79,14 +92,6 @@ def testCamera(img):
     plt.axis('off')
     plt.show()  
     
-def testCameraCurved(img):
-    for itemx in cropping_cx_curved:
-        for itemy in cropping_cy_curved:
-            img=cv.rectangle(img,(itemx,itemy),(itemx + cropping_cx_length_curved, itemy + cropping_cy_length_curved),(255,0,0),5)
-    plt.figure(figsize = (ds,ds))
-    plt.imshow(img)
-    plt.axis('off')
-    plt.show()
     
 def cropStraightImage(img):
     position_x=0
@@ -111,28 +116,6 @@ def cropStraightImage(img):
             print("Y: " + str(position_y) + "; X: " + str(position_x) + "; Tag: " + str(tag) + "; Pass: " + str(goodPart))
     return Pass
     
-def cropCurvedImage(img,isLeft):
-    position_x=0
-    position_y=0
-    Pass=True
-    for itemx in cropping_cx_curved:
-        position_x += 1
-        for itemy in cropping_cy_curved:
-            position_y %= 4
-            position_y += 1
-            img_cropped=img[itemy:itemy+cropping_cy_length_curved,itemx:itemx+cropping_cx_length_curved]
-            avg_color_per_row = np.average(img_cropped, axis=0)
-            avg_color = np.average(avg_color_per_row, axis=0)
-            if avg_color[0]>80 and avg_color[1]>80 and avg_color[2]>80:
-                tag, goodPart = Check(img_cropped,0,isLeft, not isLeft)
-                if goodPart == False:
-                    Pass = False
-            else:
-                tag="Empty"
-                goodPart = False
-                Pass = False
-            print("Y: " + str(position_y) + "; X: " + str(position_x) + "; Tag: " + str(tag) + "; Pass: " + str(goodPart))
-    return Pass
 
 def captureImage(img_count):
     
@@ -155,7 +138,7 @@ def captureImage(img_count):
             # ESC pressed
             print("Escape hit, closing...")
             break
-        elif k%256 == 32:
+        else:
             # SPACE pressed
             img_name = "./group5_test_images/opencv_frame_{}.png".format(img_counter)
             cv.imwrite(img_name, frame)
@@ -211,7 +194,7 @@ def FeatureExtraction(img_rgb,contour_filter,contourList,tagList,isStraight,hole
         
         if tag=="":
             if isStraight:
-                if area < 0.70 * minStraightArea and perimeter < 0.70 * minStraightPerimeter:
+                if area < 0.70 * minStraightArea and perimeter < 0.75 * minStraightPerimeter:
                     tag="Cut in half"
             else:
                 if area < 0.70 * minCurvedArea and perimeter < 0.90 * minCurvedPerimeter:
@@ -287,20 +270,7 @@ def readContours(isStraight):
         contourList.append(defect2Contour)
         contourList.append(defect3Contour)
         tagList = ["Good Part", "Defect: Head Cut Off","Defect: Head Cut Off + Filled","Defect: Filled in"]
-    else:
-        imgCurved = cv.imread("./shapes/curved_shape.png")
-        imgStraight = cv.imread("./shapes/straight_shape.png")
-        imgDefect1 = cv.imread("./shapes/curved_defect_1.png")
-        
-        curvedContour = getShape(imgCurved)
-        straightContour = getShape(imgStraight)
-        defect1Contour =  getShape(imgDefect1)
-        
-        contourList.append(curvedContour)
-        contourList.append(straightContour)
-        contourList.append(defect1Contour)
-        
-        tagList=["Good Part", "Defect: Wrong Shape","Defect: Filled in"]
+    
     return contourList, tagList
 
 def getContour(img_rgb):
@@ -322,11 +292,11 @@ def Check(img, isStraight, isLeft, isRight):
 
 
  
-for i in range (4):
+for i in range (1):
    # Initialize pass value (default true) 
    Pass=True 
-   captureImage(i+4)
-   img=cv.imread("./group5_test_images/opencv_frame_"+str(i+4)+".png") 
+   #captureImage(i+4)
+   img=cv.imread("./group5_test_images/opencv_frame_"+str(i+5)+".png") 
    #img=cv.imread("./group5_defects_2/opencv_frame_"+str(i+8)+".png")
    img_rgb = cv.cvtColor(img, cv.COLOR_BGR2RGB)
    print("image read")
@@ -338,23 +308,25 @@ for i in range (4):
    
    
    Pass=cropStraightImage(img_rgb)
-   #Pass=cropCurvedImage(img_rgb, True)
    testCamera(img_rgb)
-   #testCameraCurved(img_rgb)
+
    print(Pass)
    plcOutput(Pass)
-   
-""" 
-   
-   
-   isStraight,isLeft,isRight = plsInput()
 
-   #if(isStraight):
-       #Pass=cropStraightImage(img_rgb)
-    elif(isLeft):
-        Pass=cropCurvedImage(img_rgb, True)
-    elif(isRight):   
-        Pass=cropCurvedImage(img_rgb, False)
+   
+
+"""
+while True:
+    img_count=plcInput(img_count)
+    
+    k = cv.waitKey(180000)
+    if k == -1:
+        print("Time up")
+        break
         
-"""    
-      
+    if k%256 == 27:
+        # ESC pressed
+        print("Escape hit, closing...")
+        break     
+       
+"""
