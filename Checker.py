@@ -327,7 +327,7 @@ def readContours(isStraight):
         contourList.append(defect2Contour)
         contourList.append(defect3Contour)
         
-        tagList=["Good Part", "Defect: Wrong Shape","Defect: Filled in","Defect: Filled in + Head Cut off"]
+        tagList=["Good Part", "Defect: Wrong Shape","Defect: Filled in","Defect: Filled in + Head Cut off", "Defect: Head Cut off"]
     return contourList, tagList
 
 def getContour(img_rgb):
