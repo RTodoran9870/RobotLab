@@ -322,11 +322,12 @@ def Check(img, isStraight, isLeft, isRight):
 
 
  
-for i in range (4):
+for i in range (1):
    # Initialize pass value (default true) 
-   Pass=True 
-   captureImage(i+4)
-   img=cv.imread("./group5_test_images/opencv_frame_"+str(i+4)+".png") 
+   Pass=True
+   num=7
+   captureImage(i+num)
+   img=cv.imread("./group5_test_images/opencv_frame_"+str(i+num)+".png") 
    #img=cv.imread("./group5_defects_2/opencv_frame_"+str(i+8)+".png")
    img_rgb = cv.cvtColor(img, cv.COLOR_BGR2RGB)
    print("image read")
@@ -337,14 +338,14 @@ for i in range (4):
    print("------------------------------------")
    
    
-   Pass=cropStraightImage(img_rgb)
-   #Pass=cropCurvedImage(img_rgb, True)
-   testCamera(img_rgb)
-   #testCameraCurved(img_rgb)
+   #Pass=cropStraightImage(img_rgb)
+   Pass=cropCurvedImage(img_rgb, True)
+   #testCamera(img_rgb)
+   testCameraCurved(img_rgb)
    print(Pass)
    plcOutput(Pass)
    
-""" 
+   """ 
    
    
    isStraight,isLeft,isRight = plsInput()
