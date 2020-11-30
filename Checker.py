@@ -7,6 +7,7 @@ Created on Wed Nov 18 15:55:57 2020
 import cv2 as cv
 import numpy as np
 from matplotlib import pyplot as plt
+from save_results import ResultsSave
 #from gpio import LED
 #from gpio import Button
 
@@ -33,6 +34,18 @@ cropping_cx_curved=[30,230,430]
 cropping_cx_length_curved=200
 
 #R.Pi pins and defaul states
+
+
+
+
+class Part:
+    def __init__(self, position_x,position_y,isCorrect,description):
+        self.position_x = position_x
+        self.position_y = position_y
+        self.isCorrect = isCorrect
+        self.description = description
+
+
 
 
 
@@ -89,6 +102,7 @@ def testCameraCurved(img):
     plt.show()
     
 def cropStraightImage(img):
+    partList = []
     position_x=0
     position_y=0
     Pass=True
@@ -109,9 +123,12 @@ def cropStraightImage(img):
                 goodPart = False
                 Pass = False
             print("Y: " + str(position_y) + "; X: " + str(position_x) + "; Tag: " + str(tag) + "; Pass: " + str(goodPart))
-    return Pass
+            part = Part(position_x, position_y, isCorrect=goodPart, description=tag)
+            partList.append(part)
+    return partList, Pass
     
 def cropCurvedImage(img,isLeft):
+    partList=[]
     position_x=0
     position_y=0
     Pass=True
@@ -132,7 +149,9 @@ def cropCurvedImage(img,isLeft):
                 goodPart = False
                 Pass = False
             print("Y: " + str(position_y) + "; X: " + str(position_x) + "; Tag: " + str(tag) + "; Pass: " + str(goodPart))
-    return Pass
+            part = Part(position_x, position_y, isCorrect=goodPart, description=tag)
+            partList.append(part)
+    return partList, Pass
 
 def captureImage(img_count):
     
@@ -291,16 +310,24 @@ def readContours(isStraight):
         imgCurved = cv.imread("./shapes/curved_shape.png")
         imgStraight = cv.imread("./shapes/straight_shape.png")
         imgDefect1 = cv.imread("./shapes/curved_defect_1.png")
+        imgDefect2 = cv.imread("./shapes/curved_defect_2.png")
+        imgDefect3 = cv.imread("./shapes/curved_defect_3.png")
+        imgDefect3 = cv.flip(imgDefect3,0)
+        
         
         curvedContour = getShape(imgCurved)
         straightContour = getShape(imgStraight)
         defect1Contour =  getShape(imgDefect1)
+        defect2Contour = getShape(imgDefect2)
+        defect3Contour = getShape(imgDefect3)
         
         contourList.append(curvedContour)
         contourList.append(straightContour)
         contourList.append(defect1Contour)
+        contourList.append(defect2Contour)
+        contourList.append(defect3Contour)
         
-        tagList=["Good Part", "Defect: Wrong Shape","Defect: Filled in"]
+        tagList=["Good Part", "Defect: Wrong Shape","Defect: Filled in","Defect: Filled in + Head Cut off"]
     return contourList, tagList
 
 def getContour(img_rgb):
@@ -323,12 +350,17 @@ def Check(img, isStraight, isLeft, isRight):
 
  
 for i in range (1):
-   # Initialize pass value (default true) 
+   # Initialize pass value (default true)
    Pass=True
-   num=7
-   captureImage(i+num)
-   img=cv.imread("./group5_test_images/opencv_frame_"+str(i+num)+".png") 
-   #img=cv.imread("./group5_defects_2/opencv_frame_"+str(i+8)+".png")
+   my_results=ResultsSave('groupx_vision_result_3.csv','groupx_plc_result_.3.csv')
+   shuttle_list=['curved']
+   j=0
+           
+       
+   num=3
+   #captureImage(i+num)
+   #img=cv.imread("./group5_test_images/opencv_frame_"+str(i+num)+".png") 
+   img=cv.imread("./images/group5_defects_2/opencv_frame_"+str(i+num)+".png")
    img_rgb = cv.cvtColor(img, cv.COLOR_BGR2RGB)
    print("image read")
    plt.figure(figsize = (ds,ds))
@@ -337,17 +369,22 @@ for i in range (1):
    plt.show()       
    print("------------------------------------")
    
-   
    #Pass=cropStraightImage(img_rgb)
-   Pass=cropCurvedImage(img_rgb, True)
+   partList, Pass=cropCurvedImage(img_rgb, True)
    #testCamera(img_rgb)
    testCameraCurved(img_rgb)
-   print(Pass)
+   print("Pass: ",Pass)
    plcOutput(Pass)
    
+   
+   while j<len(shuttle_list):
+       for part in partList:
+           my_results.insert_vision(j,part.position_x+3*(part.position_y-1),part.isCorrect,part.description)
+           #my_results.insert_plc(j,0)
+           #my_results.insert_plc(i,['0001'])
+       j+=1
+   
    """ 
-   
-   
    isStraight,isLeft,isRight = plsInput()
 
    #if(isStraight):
