@@ -7,8 +7,26 @@ Created on Wed Nov 18 15:55:57 2020
 import cv2 as cv
 import numpy as np
 from matplotlib import pyplot as plt
-#from gpio import LED
-#from gpio import Button
+from time import sleep
+
+#Configure Raspberry Pi GPIO
+import RPi.GPIO as GPIO
+
+#Set GPIO port numbering
+GPIO.setmode(GPIO.BCM)               # BCM for GPIO numbering  
+
+#Set input pins
+GPIO.setup(26, GPIO.IN,  pull_up_down=GPIO.PUD_DOWN) # input1
+GPIO.setup(20, GPIO.IN,  pull_up_down=GPIO.PUD_DOWN) # input2
+GPIO.setup(21, GPIO.IN,  pull_up_down=GPIO.PUD_DOWN) # input3
+ 
+#Set output pins
+GPIO.setup(5, GPIO.OUT, initial=1)    # Output 1
+GPIO.setup(12, GPIO.OUT, initial=1)    # Output 2
+GPIO.setup(6, GPIO.OUT, initial=1)    # Output 3
+GPIO.setup(13, GPIO.OUT, initial=1)    # Output 4 (Relay 1)
+GPIO.setup(19, GPIO.OUT, initial=1)    # Output 5 (Relay 2)
+GPIO.setup(16, GPIO.OUT, initial=1)    # Output 6 (Relay 3)
 
 
 ds=12

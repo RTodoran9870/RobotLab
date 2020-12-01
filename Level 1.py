@@ -7,8 +7,28 @@ Created on Wed Nov 18 15:55:57 2020
 import cv2 as cv
 import numpy as np
 from matplotlib import pyplot as plt
-#from gpio import LED
-#from gpio import Button
+from time import sleep
+
+#Configure Raspberry Pi GPIO
+import RPi.GPIO as GPIO
+
+#Set GPIO port numbering
+GPIO.setmode(GPIO.BCM)               # BCM for GPIO numbering  
+
+#Set input pins
+GPIO.setup(26, GPIO.IN,  pull_up_down=GPIO.PUD_DOWN) # input1
+GPIO.setup(20, GPIO.IN,  pull_up_down=GPIO.PUD_DOWN) # input2
+GPIO.setup(21, GPIO.IN,  pull_up_down=GPIO.PUD_DOWN) # input3
+ 
+#Set output pins
+GPIO.setup(5, GPIO.OUT, initial=1)    # Output 1
+GPIO.setup(12, GPIO.OUT, initial=1)    # Output 2
+GPIO.setup(6, GPIO.OUT, initial=1)    # Output 3
+GPIO.setup(13, GPIO.OUT, initial=1)    # Output 4 (Relay 1)
+GPIO.setup(19, GPIO.OUT, initial=1)    # Output 5 (Relay 2)
+GPIO.setup(16, GPIO.OUT, initial=1)    # Output 6 (Relay 3)
+
+
 
 img_count=1
 ds=12
@@ -33,52 +53,49 @@ cropping_cx_curved=[30,230,430]
 cropping_cx_length_curved=200
 
 
-#Rasberri Pi pins settings
-#Relay
-#obit1=LED(14,False)
-#Good or bad batch
-#obit2=LED(15,False)
-#ibit1=Button(5,False)
+
 
 
 def plcOutput(Pass):
-    #Set R.P. pins as boolean outputs 
       
     if Pass:
-        #bit1.on()
-        #bit2.on()
+        GPIO.output(5, 1)     # Passed batch - Op1 - high
+        GPIO.output(13, 1)     # Finished inspection on batch - Relay 1 - up
         print("Good batch")
         
+        sleep(0.5)
+        GPIO.output(5, 0)     # Reset op1 to defaul low value
+        GPIO.output(13, 0)     # Reset relay to default low value
+        
     else:
-        #bit1.on()
-        #bit2.off()
+        GPIO.output(5, 0)     # Failed batch - Op1 - low
+        GPIO.output(13, 1)     # Finished inspection on batch - Relay 1 - up
         print("Batch rejected")
+    
+        sleep(0.5)
+        GPIO.output(13, 0)     # Reset relay to default low value
         
     return 0
     
     
   
 def plcInput(img_num):
-    #Set pins as boolean inputs
-    #ibit1=Button(5,False)
-    """
-    #if(ibit1):
+    
+    if GPIO.input(26):
         # Begin inspection on batch
-        # Initialize pass value (default true) 
-        Pass=True 
-        #captureImage(img_num)
-        img=cv.imread("./group5_test_images/opencv_frame_"+str(img_num)+".png") 
-        #img=cv.imread("./group5_defects_2/opencv_frame_"+str(i+8)+".png")
+        Pass=True   # Initialize pass value (default true) 
+        #captureImage(img_num)    #Call capture image fn
+        img=cv.imread("./group5_test_images/opencv_frame_"+str(img_num)+".png")     #Read captured image
         img_rgb = cv.cvtColor(img, cv.COLOR_BGR2RGB)
-        #print("image read")
         
         Pass=cropStraightImage(img_rgb)
         #testCamera(img_rgb)
 
-        #print(Pass)
+        print(Pass)
         plcOutput(Pass)
         img_num+=1
-    """
+    
+    sleep(0.5) #time lag for cheching the message from PLC
     return img_num
  
     
@@ -120,7 +137,7 @@ def cropStraightImage(img):
 def captureImage(img_count):
     
     cam = cv.VideoCapture(0)
-    cv.namedWindow("test")
+    cv.namedWindow("batch{}".format(img_count))
     img_counter = img_count
 
 
@@ -130,7 +147,7 @@ def captureImage(img_count):
         if not ret:
             print("failed to grab frame")
             break
-        cv.imshow("test", frame)
+        cv.imshow("batch"+str(img_count), frame)
         #out.write(frame)
                 
         k = cv.waitKey(1)
@@ -291,42 +308,22 @@ def Check(img, isStraight, isLeft, isRight):
     return FeatureExtraction(img_rgb,contour_filter,contourList,tagList,isStraight,hole)
 
 
- 
-for i in range (1):
-   # Initialize pass value (default true) 
-   Pass=True 
-   #captureImage(i+4)
-   img=cv.imread("./group5_test_images/opencv_frame_"+str(i+5)+".png") 
-   #img=cv.imread("./group5_defects_2/opencv_frame_"+str(i+8)+".png")
-   img_rgb = cv.cvtColor(img, cv.COLOR_BGR2RGB)
-   print("image read")
-   plt.figure(figsize = (ds,ds))
-   plt.imshow(img_rgb)
-   plt.axis('off')
-   plt.show()       
-   print("------------------------------------")
-   
-   
-   Pass=cropStraightImage(img_rgb)
-   testCamera(img_rgb)
 
-   print(Pass)
-   plcOutput(Pass)
-
-   
-
-"""
-while True:
-    img_count=plcInput(img_count)
+# Call functions
+batch=1 
+while True and batch==1:
+    k = cv.waitKey(5)
     
-    k = cv.waitKey(180000)
-    if k == -1:
-        print("Time up")
-        break
-        
     if k%256 == 27:
         # ESC pressed
         print("Escape hit, closing...")
-        break     
-       
-"""
+        break
+    
+    else:
+        batch = plcInput(batch)
+
+print("Inspection of all batches complete")
+
+# Clean up pins 
+GPIO.cleanup()    
+
