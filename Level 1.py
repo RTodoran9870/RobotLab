@@ -140,6 +140,13 @@ def cropStraightImage(img):
             print("Y: " + str(position_y) + "; X: " + str(position_x) + "; Tag: " + str(tag) + "; Pass: " + str(goodPart))
             part = Part(position_x, position_y, isCorrect=goodPart, description=tag)
             partList.append(part)
+    my_results=ResultsSave('groupx_vision_result_3.csv','groupx_plc_result_.3.csv')
+    shuttle_list=['straight']
+    j=0
+    while j<len(shuttle_list):
+       for part in partList:
+           my_results.insert_vision(j,part.position_x+3*(part.position_y-1),part.isCorrect,part.description)
+       j+=1
     return partList,Pass
     
 
@@ -334,5 +341,4 @@ while True and batch==1:
 print("Inspection of all batches complete")
 
 # Clean up pins 
-GPIO.cleanup()    
-
+GPIO.cleanup()  
