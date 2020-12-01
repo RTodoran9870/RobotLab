@@ -8,6 +8,7 @@ import cv2 as cv
 import numpy as np
 from matplotlib import pyplot as plt
 from time import sleep
+from save_results import ResultsSave
 
 #Configure Raspberry Pi GPIO
 import RPi.GPIO as GPIO
@@ -53,7 +54,12 @@ cropping_cx_curved=[30,230,430]
 cropping_cx_length_curved=200
 
 
-
+class Part:
+    def __init__(self, position_x,position_y,isCorrect,description):
+        self.position_x = position_x
+        self.position_y = position_y
+        self.isCorrect = isCorrect
+        self.description = description
 
 
 def plcOutput(Pass):
@@ -88,7 +94,7 @@ def plcInput(img_num):
         img=cv.imread("./group5_test_images/opencv_frame_"+str(img_num)+".png")     #Read captured image
         img_rgb = cv.cvtColor(img, cv.COLOR_BGR2RGB)
         
-        Pass=cropStraightImage(img_rgb)
+        partList,Pass=cropStraightImage(img_rgb)
         #testCamera(img_rgb)
 
         print(Pass)
@@ -111,6 +117,7 @@ def testCamera(img):
     
     
 def cropStraightImage(img):
+    partList = []
     position_x=0
     position_y=0
     Pass=True
@@ -131,7 +138,9 @@ def cropStraightImage(img):
                 goodPart = False
                 Pass = False
             print("Y: " + str(position_y) + "; X: " + str(position_x) + "; Tag: " + str(tag) + "; Pass: " + str(goodPart))
-    return Pass
+            part = Part(position_x, position_y, isCorrect=goodPart, description=tag)
+            partList.append(part)
+    return partList,Pass
     
 
 def captureImage(img_count):
