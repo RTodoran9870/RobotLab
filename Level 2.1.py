@@ -29,7 +29,6 @@ GPIO.setup(13, GPIO.OUT, initial=1)    # Output 4 (Relay 1)
 GPIO.setup(19, GPIO.OUT, initial=1)    # Output 5 (Relay 2)
 GPIO.setup(16, GPIO.OUT, initial=1)    # Output 6 (Relay 3)
 
-
 ds=12
 #Precalibrating ethalons
 minStraightArea = 6282.0
@@ -52,6 +51,7 @@ cropping_cx_curved=[30,230,430]
 cropping_cx_length_curved=200
 
 
+
 class Part:
     def __init__(self, position_x,position_y,isCorrect,description):
         self.position_x = position_x
@@ -60,49 +60,65 @@ class Part:
         self.description = description
 
 
-def plcOutput(Pass):
-      
-    if Pass:
-        GPIO.output(5, 0)     # Passed batch - Op1 - high
-        GPIO.output(13, 0)     # Finished inspection on batch - Relay 1 - up
-        print("Good batch")
-        
-        sleep(0.5)
-        GPIO.output(5, 1)     # Reset op1 to defaul low value
-        GPIO.output(13, 1)     # Reset relay to default low value
-        
-    else:
-        GPIO.output(5, 1)     # Failed batch - Op1 - low
-        GPIO.output(13, 0)     # Finished inspection on batch - Relay 1 - up
-        print("Batch rejected")
+
+def plcOutput(collumList,batch):
+    coll_num=1  
+    for collum in collumList:
+        #Set bits corresponding to correct collumns
+        if coll_num==1:
+            pin=5
+        elif coll_num==2: 
+            pin=12
+        elif coll_num==3: 
+            pin=6
+            
+        if collum: 
+            GPIO.output(pin, 0)     # Passed batch - Op1 - high (collum 1 good)
+            print("Collum {} is good".format(collumList.index(collum)+1))    
+        else:
+            GPIO.output(pin, 1)     # Failed batch - Op1 - low
+            print("Collum {} has faulty parts".format(collumList.index(collum)+1)) 
     
-        sleep(0.5)
-        GPIO.output(13, 1)     # Reset relay to default low value
-        
+        coll_num+=1
+    
+            
+    GPIO.output(13, 0)     # Finished inspection on batch - Relay 1 - up       
+    sleep(0.5)
+     
+    #Reset GPIO pins for next batch
+    GPIO.output(5, 1)     # Reset op1 to defaul low value
+    GPIO.output(12, 1)     # Reset op2 to defaul low value
+    GPIO.output(6, 1)     # Reset op3 to defaul low value
+    GPIO.output(13, 1)     # Reset relay to default low value
     return 0
     
     
-  
 def plcInput(img_num):
+    
+    
     
     if GPIO.input(26):
         # Begin inspection on batch
-        Pass=True   # Initialize pass value (default true) 
+        #Pass=True   # Initialize pass value (default true) 
+        collumList = [True,True,True] # initialise collum list with defaul good parts
         #captureImage(img_num)    #Call capture image fn
         img=cv.imread("./group5_test_images/opencv_frame_"+str(img_num)+".png")     #Read captured image
         img_rgb = cv.cvtColor(img, cv.COLOR_BGR2RGB)
         
-        partList,Pass=cropStraightImage(img_rgb)
-        #testCamera(img_rgb)
+        if img_num<=2:
+            partList,collumList=cropStraightImage(img_rgb)
+            #testCamera(img_rgb)
+        elif img_num>=2 and img_num<=6:
+            partList,collumList=cropCurvedImage(img_rgb)
+            #testCameraCurved(img_rgb)
 
-        print(Pass)
-        plcOutput(Pass)
+        print(collumList)
+        plcOutput(collumList,img_num)
         img_num+=1
     
     sleep(0.5) #time lag for cheching the message from PLC
     return img_num
- 
-    
+
 def testCamera(img):
     for itemx in cropping_cx_straight:
         for itemy in cropping_cy_straight:
@@ -113,12 +129,20 @@ def testCamera(img):
     plt.axis('off')
     plt.show()  
     
+def testCameraCurved(img):
+    for itemx in cropping_cx_curved:
+        for itemy in cropping_cy_curved:
+            img=cv.rectangle(img,(itemx,itemy),(itemx + cropping_cx_length_curved, itemy + cropping_cy_length_curved),(255,0,0),5)
+    plt.figure(figsize = (ds,ds))
+    plt.imshow(img)
+    plt.axis('off')
+    plt.show()
     
 def cropStraightImage(img):
     partList = []
+    collumList = [True,True,True]
     position_x=0
     position_y=0
-    Pass=True
     for itemx in cropping_cx_straight:
         position_x += 1
         for itemy in cropping_cy_straight:
@@ -130,6 +154,32 @@ def cropStraightImage(img):
             if avg_color[0]>80 and avg_color[1]>80 and avg_color[2]>80:
                 tag, goodPart = Check(img_cropped,1,0,0)
                 if goodPart == False:
+                    collumList[position_x-1]=False                
+            else:
+                tag="Empty"
+                goodPart = False
+                collumList[position_x-1]=False
+            print("Y: " + str(position_y) + "; X: " + str(position_x) + "; Tag: " + str(tag) + "; Pass: " + str(goodPart))
+            part = Part(position_x, position_y, isCorrect=goodPart, description=tag)
+            partList.append(part)
+    return partList, collumList
+    
+def cropCurvedImage(img,isLeft):
+    partList=[]
+    position_x=0
+    position_y=0
+    Pass=True
+    for itemx in cropping_cx_curved:
+        position_x += 1
+        for itemy in cropping_cy_curved:
+            position_y %= 4
+            position_y += 1
+            img_cropped=img[itemy:itemy+cropping_cy_length_curved,itemx:itemx+cropping_cx_length_curved]
+            avg_color_per_row = np.average(img_cropped, axis=0)
+            avg_color = np.average(avg_color_per_row, axis=0)
+            if avg_color[0]>80 and avg_color[1]>80 and avg_color[2]>80:
+                tag, goodPart = Check(img_cropped,0,isLeft, not isLeft)
+                if goodPart == False:
                     Pass = False
             else:
                 tag="Empty"
@@ -138,20 +188,12 @@ def cropStraightImage(img):
             print("Y: " + str(position_y) + "; X: " + str(position_x) + "; Tag: " + str(tag) + "; Pass: " + str(goodPart))
             part = Part(position_x, position_y, isCorrect=goodPart, description=tag)
             partList.append(part)
-    my_results=ResultsSave('groupx_vision_result_3.csv','groupx_plc_result_.3.csv')
-    shuttle_list=['straight']
-    j=0
-    while j<len(shuttle_list):
-       for part in partList:
-           my_results.insert_vision(j,part.position_x+3*(part.position_y-1),part.isCorrect,part.description)
-       j+=1
-    return partList,Pass
-    
+    return partList, Pass
 
 def captureImage(img_count):
     
     cam = cv.VideoCapture(0)
-    cv.namedWindow("batch{}".format(img_count))
+    cv.namedWindow("test")
     img_counter = img_count
 
 
@@ -161,7 +203,7 @@ def captureImage(img_count):
         if not ret:
             print("failed to grab frame")
             break
-        cv.imshow("batch"+str(img_count), frame)
+        cv.imshow("test", frame)
         #out.write(frame)
                 
         k = cv.waitKey(1)
@@ -169,7 +211,7 @@ def captureImage(img_count):
             # ESC pressed
             print("Escape hit, closing...")
             break
-        else:
+        elif k%256 == 32:
             # SPACE pressed
             img_name = "./group5_test_images/opencv_frame_{}.png".format(img_counter)
             cv.imwrite(img_name, frame)
@@ -225,7 +267,7 @@ def FeatureExtraction(img_rgb,contour_filter,contourList,tagList,isStraight,hole
         
         if tag=="":
             if isStraight:
-                if area < 0.70 * minStraightArea and perimeter < 0.75 * minStraightPerimeter:
+                if area < 0.70 * minStraightArea and perimeter < 0.70 * minStraightPerimeter:
                     tag="Cut in half"
             else:
                 if area < 0.70 * minCurvedArea and perimeter < 0.90 * minCurvedPerimeter:
@@ -301,7 +343,28 @@ def readContours(isStraight):
         contourList.append(defect2Contour)
         contourList.append(defect3Contour)
         tagList = ["Good Part", "Defect: Head Cut Off","Defect: Head Cut Off + Filled","Defect: Filled in"]
-    
+    else:
+        imgCurved = cv.imread("./shapes/curved_shape.png")
+        imgStraight = cv.imread("./shapes/straight_shape.png")
+        imgDefect1 = cv.imread("./shapes/curved_defect_1.png")
+        imgDefect2 = cv.imread("./shapes/curved_defect_2.png")
+        imgDefect3 = cv.imread("./shapes/curved_defect_3.png")
+        imgDefect3 = cv.flip(imgDefect3,0)
+        
+        
+        curvedContour = getShape(imgCurved)
+        straightContour = getShape(imgStraight)
+        defect1Contour =  getShape(imgDefect1)
+        defect2Contour = getShape(imgDefect2)
+        defect3Contour = getShape(imgDefect3)
+        
+        contourList.append(curvedContour)
+        contourList.append(straightContour)
+        contourList.append(defect1Contour)
+        contourList.append(defect2Contour)
+        contourList.append(defect3Contour)
+        
+        tagList=["Good Part", "Defect: Wrong Shape","Defect: Filled in","Defect: Filled in + Head Cut off", "Defect: Head Cut off"]
     return contourList, tagList
 
 def getContour(img_rgb):
@@ -322,22 +385,41 @@ def Check(img, isStraight, isLeft, isRight):
     return FeatureExtraction(img_rgb,contour_filter,contourList,tagList,isStraight,hole)
 
 
-
-# Call functions
-batch=1 
-while True and batch==1:
-    k = cv.waitKey(5)
-    
-    if k%256 == 27:
-        # ESC pressed
-        print("Escape hit, closing...")
-        break
-    
-    else:
-        batch = plcInput(batch)
-
-print("Inspection of all batches complete")
-
-# Clean up pins 
-GPIO.cleanup()    
-
+ 
+for i in range (1):
+   # Initialize pass value (default true)
+   Pass=True
+   my_results=ResultsSave('group5_vision_result_3.csv','group5_plc_result_.3.csv')
+   shuttle_list=['straight','straight','curved','curved','curved','curved']
+   j=0
+           
+       
+   num=3
+   #captureImage(i+num)
+   #img=cv.imread("./group5_test_images/opencv_frame_"+str(i+num)+".png") 
+   img=cv.imread("./group5_defects_2/opencv_frame_"+str(i+num)+".png")
+   img_rgb = cv.cvtColor(img, cv.COLOR_BGR2RGB)
+   print("image read")
+   plt.figure(figsize = (ds,ds))
+   plt.imshow(img_rgb)
+   plt.axis('off')
+   plt.show()       
+   print("------------------------------------")
+   
+   #Pass=cropStraightImage(img_rgb)
+   partList, Pass=cropCurvedImage(img_rgb, True)
+   #testCamera(img_rgb)
+   testCameraCurved(img_rgb)
+   print("Pass: ",Pass)
+   plcOutput(Pass)
+   
+   
+   while j<len(shuttle_list):
+       for part in partList:
+           my_results.insert_vision(j+1,part.position_x+3*(part.position_y-1),part.isCorrect,part.description)
+           #my_results.insert_plc(j,0)
+           #my_results.insert_plc(i,['0001'])
+       j+=1
+   
+  
+      
