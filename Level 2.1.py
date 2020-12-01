@@ -59,30 +59,55 @@ class Part:
         self.isCorrect = isCorrect
         self.description = description
 
-
+def displayGPIO():
+    # Get input pin values and display them 
+    pins_input_List=[]
+    pins_input_List.append(GPIO.input(26))
+    pins_input_List.append(GPIO.input(20))
+    pins_input_List.append(GPIO.input(21))
+    print("Inputs: "+str(pins_input_List))
+    
+    # Get output pin values and display them
+    pins_output_List=[]
+    
+    pins_output_List.append(GPIO.input(5))
+    pins_output_List.append(GPIO.input(12))
+    pins_output_List.append(GPIO.input(6))
+    pins_output_List.append(GPIO.input(13))
+    pins_output_List.append(GPIO.input(19))
+    pins_output_List.append(GPIO.input(16))
+    print("Outputs: "+str(pins_output_List))
+    
+    return pins_input_List,pins_output_List
 
 def plcOutput(collumList,batch):
-    coll_num=1  
-    for collum in collumList:
+     
+    for coll_num in range(3):
         #Set bits corresponding to correct collumns
-        if coll_num==1:
+        if coll_num==0:
             pin=5
-        elif coll_num==2: 
+        elif coll_num==1: 
             pin=12
-        elif coll_num==3: 
+        elif coll_num==2: 
             pin=6
             
+        collum=collumList[coll_num]
+        print(collum)
         if collum: 
             GPIO.output(pin, 0)     # Passed batch - Op1 - high (collum 1 good)
-            print("Collum {} is good".format(collumList.index(collum)+1))    
+            print("Collum {} is good".format(coll_num+1))  
         else:
             GPIO.output(pin, 1)     # Failed batch - Op1 - low
-            print("Collum {} has faulty parts".format(collumList.index(collum)+1)) 
+            print("Collum {} has faulty parts".format(coll_num+1)) 
     
-        coll_num+=1
+        
     
-            
-    GPIO.output(13, 0)     # Finished inspection on batch - Relay 1 - up       
+    sleed(0.5)        
+    GPIO.output(13, 0)     # Finished inspection on batch - Relay 1 - up  
+    pins_input_List,pins_output_List = displayGPIO()
+    """
+    Maybe here can write results to excel @Razvan
+    """
     sleep(0.5)
      
     #Reset GPIO pins for next batch
@@ -99,22 +124,27 @@ def plcInput(img_num):
     
     if GPIO.input(26):
         # Begin inspection on batch
-        #Pass=True   # Initialize pass value (default true) 
+        # Initialize pass value (default true) 
         collumList = [True,True,True] # initialise collum list with defaul good parts
         #captureImage(img_num)    #Call capture image fn
         img=cv.imread("./group5_test_images/opencv_frame_"+str(img_num)+".png")     #Read captured image
         img_rgb = cv.cvtColor(img, cv.COLOR_BGR2RGB)
         
-        if img_num<=2:
+        if not GPIO.input(20) and not GPIO.input(21):
             partList,collumList=cropStraightImage(img_rgb)
             #testCamera(img_rgb)
-        elif img_num>=2 and img_num<=6:
-            partList,collumList=cropCurvedImage(img_rgb)
+        elif not GPIO.input(20) and GPIO.input(21):
+            partList,collumList=cropCurvedImage(img_rgb,True)
             #testCameraCurved(img_rgb)
+        elif GPIO.input(20) and not GPIO.input(21):
+            partList,collumList=cropCurvedImage(img_rgb,False)
+            #testCameraCurved(img_rgb)    
 
         print(collumList)
         plcOutput(collumList,img_num)
         img_num+=1
+    else:
+        print("Waiting for signal from PLC")
     
     sleep(0.5) #time lag for cheching the message from PLC
     return img_num
@@ -165,10 +195,10 @@ def cropStraightImage(img):
     return partList, collumList
     
 def cropCurvedImage(img,isLeft):
-    partList=[]
+    partList = []
+    collumList = [True,True,True]
     position_x=0
     position_y=0
-    Pass=True
     for itemx in cropping_cx_curved:
         position_x += 1
         for itemy in cropping_cy_curved:
@@ -180,15 +210,20 @@ def cropCurvedImage(img,isLeft):
             if avg_color[0]>80 and avg_color[1]>80 and avg_color[2]>80:
                 tag, goodPart = Check(img_cropped,0,isLeft, not isLeft)
                 if goodPart == False:
-                    Pass = False
+                    collumList[position_x-1]=False
             else:
                 tag="Empty"
                 goodPart = False
-                Pass = False
+                collumList[position_x-1]=False
             print("Y: " + str(position_y) + "; X: " + str(position_x) + "; Tag: " + str(tag) + "; Pass: " + str(goodPart))
             part = Part(position_x, position_y, isCorrect=goodPart, description=tag)
             partList.append(part)
-    return partList, Pass
+            
+    if isLeft:
+        print("Curved left batch")
+    else:
+        print("Curved right batch")
+    return partList, collumList
 
 def captureImage(img_count):
     
@@ -211,8 +246,8 @@ def captureImage(img_count):
             # ESC pressed
             print("Escape hit, closing...")
             break
-        elif k%256 == 32:
-            # SPACE pressed
+        else:
+            # ESC not pressed
             img_name = "./group5_test_images/opencv_frame_{}.png".format(img_counter)
             cv.imwrite(img_name, frame)
             print("{} written!".format(img_name))
@@ -386,40 +421,23 @@ def Check(img, isStraight, isLeft, isRight):
 
 
  
-for i in range (1):
-   # Initialize pass value (default true)
-   Pass=True
-   my_results=ResultsSave('group5_vision_result_3.csv','group5_plc_result_.3.csv')
-   shuttle_list=['straight','straight','curved','curved','curved','curved']
-   j=0
-           
-       
-   num=3
-   #captureImage(i+num)
-   #img=cv.imread("./group5_test_images/opencv_frame_"+str(i+num)+".png") 
-   img=cv.imread("./group5_defects_2/opencv_frame_"+str(i+num)+".png")
-   img_rgb = cv.cvtColor(img, cv.COLOR_BGR2RGB)
-   print("image read")
-   plt.figure(figsize = (ds,ds))
-   plt.imshow(img_rgb)
-   plt.axis('off')
-   plt.show()       
-   print("------------------------------------")
+
    
-   #Pass=cropStraightImage(img_rgb)
-   partList, Pass=cropCurvedImage(img_rgb, True)
-   #testCamera(img_rgb)
-   testCameraCurved(img_rgb)
-   print("Pass: ",Pass)
-   plcOutput(Pass)
-   
-   
-   while j<len(shuttle_list):
-       for part in partList:
-           my_results.insert_vision(j+1,part.position_x+3*(part.position_y-1),part.isCorrect,part.description)
-           #my_results.insert_plc(j,0)
-           #my_results.insert_plc(i,['0001'])
-       j+=1
-   
-  
+# Call functions
+batch=6 
+while True and batch<=7:
+    k = cv.waitKey(5)
+    
+    if k%256 == 27:
+        # ESC pressed
+        print("Escape hit, closing...")
+        break
+    
+    else:
+        batch = plcInput(batch)
+
+print("Inspection of all batches complete")
+
+# Clean up pins 
+GPIO.cleanup()      
       

@@ -59,6 +59,26 @@ class Part:
         self.isCorrect = isCorrect
         self.description = description
 
+def displayGPIO():
+    # Get input pin values and display them 
+    pins_input_List=[]
+    pins_input_List.append(GPIO.input(26))
+    pins_input_List.append(GPIO.input(20))
+    pins_input_List.append(GPIO.input(21))
+    print("Inputs: "+str(pins_input_List))
+    
+    # Get output pin values and display them
+    pins_output_List=[]
+    
+    pins_output_List.append(GPIO.input(5))
+    pins_output_List.append(GPIO.input(12))
+    pins_output_List.append(GPIO.input(6))
+    pins_output_List.append(GPIO.input(13))
+    pins_output_List.append(GPIO.input(19))
+    pins_output_List.append(GPIO.input(16))
+    print("Outputs: "+str(pins_output_List))
+    
+    return 0
 
 def plcOutput(Pass):
       
@@ -68,8 +88,8 @@ def plcOutput(Pass):
         print("Good batch")
         
         sleep(0.5)
-        GPIO.output(5, 1)     # Reset op1 to defaul low value
-        GPIO.output(13, 1)     # Reset relay to default low value
+        
+        
         
     else:
         GPIO.output(5, 1)     # Failed batch - Op1 - low
@@ -77,8 +97,11 @@ def plcOutput(Pass):
         print("Batch rejected")
     
         sleep(0.5)
-        GPIO.output(13, 1)     # Reset relay to default low value
         
+        
+    displayGPIO()
+    sleep(0.5)
+    GPIO.output(13, 1)     # Reset relay to default low value
     return 0
     
     
@@ -88,17 +111,18 @@ def plcInput(img_num):
     if GPIO.input(26):
         # Begin inspection on batch
         Pass=True   # Initialize pass value (default true) 
-        #captureImage(img_num)    #Call capture image fn
+        captureImage(img_num)    #Call capture image fn
         img=cv.imread("./group5_test_images/opencv_frame_"+str(img_num)+".png")     #Read captured image
         img_rgb = cv.cvtColor(img, cv.COLOR_BGR2RGB)
         
         partList,Pass=cropStraightImage(img_rgb)
-        #testCamera(img_rgb)
+        testCamera(img_rgb)
 
         print(Pass)
         plcOutput(Pass)
         img_num+=1
-    
+    else:
+        print("Waiting for signal from PLC")
     sleep(0.5) #time lag for cheching the message from PLC
     return img_num
  
@@ -170,7 +194,7 @@ def captureImage(img_count):
             print("Escape hit, closing...")
             break
         else:
-            # SPACE pressed
+            # ESC not pressed
             img_name = "./group5_test_images/opencv_frame_{}.png".format(img_counter)
             cv.imwrite(img_name, frame)
             print("{} written!".format(img_name))
@@ -324,8 +348,8 @@ def Check(img, isStraight, isLeft, isRight):
 
 
 # Call functions
-batch=1 
-while True and batch==1:
+batch=4 
+while True and batch==4:
     k = cv.waitKey(5)
     
     if k%256 == 27:
