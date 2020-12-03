@@ -10,10 +10,27 @@ import numpy as np
 from matplotlib import pyplot as plt
 from save_results import ResultsSave
 from time import sleep
-#from gpio import LED
-#from gpio import Button
 
+#Configure Raspberry Pi GPIO
+import RPi.GPIO as GPIO
 
+#Set GPIO port numbering
+GPIO.setmode(GPIO.BCM)               # BCM for GPIO numbering  
+
+#Set input pins
+GPIO.setup(26, GPIO.IN,  pull_up_down=GPIO.PUD_DOWN) # input1
+GPIO.setup(20, GPIO.IN,  pull_up_down=GPIO.PUD_DOWN) # input2
+GPIO.setup(21, GPIO.IN,  pull_up_down=GPIO.PUD_DOWN) # input3
+ 
+#Set output pins
+GPIO.setup(5, GPIO.OUT, initial=1)    # Output 1
+GPIO.setup(12, GPIO.OUT, initial=1)    # Output 2
+GPIO.setup(6, GPIO.OUT, initial=1)    # Output 3
+GPIO.setup(13, GPIO.OUT, initial=1)    # Output 4 (Relay 1)
+GPIO.setup(19, GPIO.OUT, initial=1)    # Output 5 (Relay 2)
+GPIO.setup(16, GPIO.OUT, initial=1)    # Output 6 (Relay 3)
+
+tray_counter = 0
 ds=12
 #Precalibrating ethalons
 minStraightArea = 5000
@@ -43,7 +60,163 @@ class Part:
         self.isCorrect = isCorrect
         self.description = description
         
+def displayGPIO():
+    # Get input pin values and display them 
+    pins_input_List=[]
+    pins_input_List.append(GPIO.input(26))
+    pins_input_List.append(GPIO.input(20))
+    pins_input_List.append(GPIO.input(21))
+    print("Inputs: "+str(pins_input_List))
+    
+    # Get output pin values and display them
+    pins_output_List=[]
+    
+    pins_output_List.append(GPIO.input(5))
+    pins_output_List.append(GPIO.input(12))
+    pins_output_List.append(GPIO.input(6))
+    pins_output_List.append(GPIO.input(13))
+    pins_output_List.append(GPIO.input(19))
+    pins_output_List.append(GPIO.input(16))
+    print("Outputs: "+str(pins_output_List))
+    
+    return pins_input_List,pins_output_List        
+
+def plcOutput(partList,batch):
+    sleep(2.5)   
+    my_results_plc=ResultsSave('group5_vision_result_dummy'+str(batch)+'.csv','group5_plc_result_lvl3'+str(batch)+'.csv')
+    
+    for row in range(4):
+        #Set bits corresponding to correct rows
+        if row==0:
+            #specify row 1
+            GPIO.output(19,1)
+            GPIO.output(16,1)
+            
+            #send quality bits
+            for part in partList:
+                if part.position_y==1 and part.position_x==1 and part.isCorrect==True:
+                    GPIO.output(5,0)
+                elif part.position_y==1 and part.position_x==2 and part.isCorrect==True:
+                    GPIO.output(12,0)
+                elif part.position_y==1 and part.position_x==3 and part.isCorrect==True:
+                    GPIO.output(5,0) 
+            
+            #Send pulse relay 1 that row is done
+            sleep(0.5)
+            GPIO.output(13, 0)     # Finished inspection on batch row - Relay 1 - up 
+            sleep(0.5)
+            
+            #Display and save results for row
+            pins_input_List,pins_output_List = displayGPIO()
+            response = str(pins_input_List)+str(pins_output_List)
+            my_results_plc.insert_plc(batch,response)
+            
+            # Reset relay 1 after 0.5s after each row is inspected
+            GPIO.output(13,1)
+            
+        elif row==1: 
+            #specify row 2
+            GPIO.output(19,1)
+            GPIO.output(16,0)
+            
+            #send quality bits
+            for part in partList:
+                if part.position_y==2 and part.position_x==1 and part.isCorrect==True:
+                    GPIO.output(5,0)
+                elif part.position_y==2 and part.position_x==2 and part.isCorrect==True:
+                    GPIO.output(12,0)
+                elif part.position_y==2 and part.position_x==3 and part.isCorrect==True:
+                    GPIO.output(5,0)
+            
+            #Send pulse relay 1 that row is done
+            sleep(0.5)
+            GPIO.output(13, 0)     # Finished inspection on batch row - Relay 1 - up 
+            sleep(0.5)
+            
+            #Display and save results for row
+            pins_input_List,pins_output_List = displayGPIO()
+            response = str(pins_input_List)+str(pins_output_List)
+            my_results_plc.insert_plc(batch,response)
+            
+            # Reset relay 1 after 0.5s after each row is inspected
+            GPIO.output(13,1)
+            
+        elif row==2: 
+            #specify row 3
+            GPIO.output(19,0)
+            GPIO.output(16,1)
+            #send quality bits
+            for part in partList:
+                if part.position_y==3 and part.position_x==1 and part.isCorrect==True:
+                    GPIO.output(5,0)
+                elif part.position_y==3 and part.position_x==2 and part.isCorrect==True:
+                    GPIO.output(12,0)
+                elif part.position_y==3 and part.position_x==3 and part.isCorrect==True:
+                    GPIO.output(5,0) 
+                    
+            #Send pulse relay 1 that row is done
+            sleep(0.5)
+            GPIO.output(13, 0)     # Finished inspection on batch row - Relay 1 - up 
+            sleep(0.5)
+            
+            #Display and save results for row
+            pins_input_List,pins_output_List = displayGPIO()
+            response = str(pins_input_List)+str(pins_output_List)
+            my_results_plc.insert_plc(batch,response)
+            
+            # Reset relay 1 after 0.5s after each row is inspected
+            GPIO.output(13,1)
+            
+        elif row==3:
+            #specify row 4
+            GPIO.output(19,0)
+            GPIO.output(16,0)
+            #send quality bits
+            for part in partList:
+                if part.position_y==4 and part.position_x==1 and part.isCorrect==True:
+                    GPIO.output(5,0)
+                elif part.position_y==4 and part.position_x==2 and part.isCorrect==True:
+                    GPIO.output(12,0)
+                elif part.position_y==4 and part.position_x==3 and part.isCorrect==True:
+                    GPIO.output(5,0) 
+           
+            #Send pulse relay 1 that row is done
+            sleep(0.5)
+            GPIO.output(13, 0)     # Finished inspection on batch row - Relay 1 - up 
+            sleep(0.5)
+            
+            #Display and save results for row
+            pins_input_List,pins_output_List = displayGPIO()
+            response = str(pins_input_List)+str(pins_output_List)
+            my_results_plc.insert_plc(batch,response)
+            
+            # Reset relay 1 after 0.5s after each row is inspected
+            GPIO.output(13,1)
+                       
+
+    return 0
+    
+    
+def plcInput(img_num):
+    
+    # If signal from plc recieved, begin inspection
+    if GPIO.input(26):
+        # Begin inspection on batct
+        partList = videoCapture()
         
+        print(partList)
+        plcOutput(partList,img_num)   #Call plcOutput fn
+        img_num+=1
+        
+    else:
+        print("Waiting for signal from PLC.")
+        sleep(0.25)
+        print("Waiting for signal from PLC..")
+        sleep(0.25)
+        print("Waiting for signal from PLC...")
+    
+    #sleep(0.5) #time lag for cheching the message from PLC
+    return img_num
         
 def testCamera(img):
     for itemx in cropping_cx_straight:
@@ -68,7 +241,6 @@ def cropStraightImage(img):
     global  tray_counter
     tray_counter += 1
     partList = []
-    collumnList = [True,True,True]
     position_x=0
     position_y=0
     img = cv.cvtColor(img, cv.COLOR_BGR2RGB)
@@ -82,24 +254,20 @@ def cropStraightImage(img):
             avg_color = np.average(avg_color_per_row, axis=0)
             if avg_color[0]>80 and avg_color[1]>80 and avg_color[2]>80:
                 tag, goodPart = Check(img_cropped,1,0,0)
-                if goodPart == False:
-                    collumnList[position_x-1]=False                
+                  
             else:
                 tag="Empty"
                 goodPart = False
-                collumnList[position_x-1]=False
+
             print("Y: " + str(position_y) + "; X: " + str(position_x) + "; Tag: " + str(tag) + "; Pass: " + str(goodPart))
             part = Part(position_x, position_y, isCorrect=goodPart, description=tag)
             partList.append(part)
+    #Save results
+    my_results_vision=ResultsSave('group5_vision_result_lvl3'+str(tray_counter)+'.csv','group5_plc_result_dummy'+str(tray_counter)+'.csv')
     for part in partList:
-        img = cv.putText(img, part.description,(cropping_cx_straight[part.position_x-1] -50,cropping_cy_straight[part.position_y-1] +35),cv.FONT_HERSHEY_SIMPLEX ,0.3,(0,0,255),1,cv.LINE_AA)
-    """
-    TODO: Add demo_images folder
-    TODO: Writing into excel
-    """
-    img_name = "./demo_images/opencv_frame_{}.png".format(tray_counter)
-    cv.imwrite(img_name, img)        
-    return partList,collumnList
+        my_results_vision.insert_vision(tray_counter,part.position_x+3*(part.position_y-1),'straight',part.isCorrect,part.description)
+        
+    return partList
     
 
 
@@ -107,7 +275,6 @@ def cropCurvedImage(img,isLeft):
     global  tray_counter
     tray_counter += 1
     partList = []
-    collumnList = [True,True,True]
     position_x=0
     position_y=0
     img = cv.cvtColor(img, cv.COLOR_BGR2RGB)
@@ -121,24 +288,19 @@ def cropCurvedImage(img,isLeft):
             avg_color = np.average(avg_color_per_row, axis=0)
             if avg_color[0]>80 and avg_color[1]>80 and avg_color[2]>80:
                 tag, goodPart = Check(img_cropped,0,isLeft, not isLeft)
-                if goodPart == False:
-                    collumnList[position_x-1]=False
+                
             else:
                 tag="Empty"
                 goodPart = False
-                collumnList[position_x-1]=False
             print("Y: " + str(position_y) + "; X: " + str(position_x) + "; Tag: " + str(tag) + "; Pass: " + str(goodPart))
             part = Part(position_x, position_y, isCorrect=goodPart, description=tag)
             partList.append(part)
+    #Save results
+    my_results=ResultsSave('group5_vision_result_lvl2'+str(tray_counter)+'.csv','group5_plc_result_dummy.csv')
     for part in partList:
-        img = cv.putText(img, part.description,(cropping_cx_straight[part.position_x-1] -50,cropping_cy_straight[part.position_y-1] +35),cv.FONT_HERSHEY_SIMPLEX ,0.3,(0,0,255),1,cv.LINE_AA)
-    """
-    TODO: Add demo_images folder
-    TODO: Writing into excel
-    """
-    img_name = "./demo_images/opencv_frame_{}.png".format(tray_counter)
-    cv.imwrite(img_name, img)  
-    return partList,collumnList
+        my_results.insert_vision(tray_counter,part.position_x+3*(part.position_y-1),'curved',part.isCorrect,part.description)
+    
+    return partList
 
 def FeatureExtraction(img_rgb,contour_filter,contourList,tagList,isStraight,hole):
     img_feature=img_rgb.copy()
@@ -197,12 +359,7 @@ def FeatureExtraction(img_rgb,contour_filter,contourList,tagList,isStraight,hole
     
         img = cv.putText(img_feature,tag,(cx-50,cy+35),cv.FONT_HERSHEY_SIMPLEX ,0.3,(0,0,255),1,cv.LINE_AA)
         
-    
-    # Display extracted features
-    #plt.figure(figsize = (ds,ds))
-    #plt.imshow(img_feature)
-    #plt.axis('off')
-    #plt.show()    
+  
     if tag == "Good Part":
         goodPart = True
     else:
@@ -385,6 +542,26 @@ def videoCapture():
     else:
         partList, Pass=cropCurvedImage(frame)
 
-# When everything done, release the capture
+    # When everything done, release the capture
     cap.release()
     cv.destroyAllWindows()
+    
+    return partList
+    
+# Call functions
+batch=1 
+while True and batch<=20:
+    k = cv.waitKey(5)
+    
+    if k%256 == 27:
+        # ESC pressed
+        print("Escape hit, closing...")
+        break
+    
+    else:
+        batch = plcInput(batch)
+
+print("Inspection of all batches complete")
+
+# Clean up pins 
+GPIO.cleanup()     
