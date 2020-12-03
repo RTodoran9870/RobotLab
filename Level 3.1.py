@@ -91,9 +91,14 @@ def cropStraightImage(img):
             print("Y: " + str(position_y) + "; X: " + str(position_x) + "; Tag: " + str(tag) + "; Pass: " + str(goodPart))
             part = Part(position_x, position_y, isCorrect=goodPart, description=tag)
             partList.append(part)
+    for part in partList:
+        img = cv.putText(img, part.description,(cropping_cx_straight[part.position_x-1] -50,cropping_cy_straight[part.position_y-1] +35),cv.FONT_HERSHEY_SIMPLEX ,0.3,(0,0,255),1,cv.LINE_AA)
     """
+    TODO: Add demo_images folder
     TODO: Writing into excel
     """
+    img_name = "./demo_images/opencv_frame_{}.png".format(tray_counter)
+    cv.imwrite(img_name, img)        
     return partList,collumnList
     
 
@@ -125,9 +130,14 @@ def cropCurvedImage(img,isLeft):
             print("Y: " + str(position_y) + "; X: " + str(position_x) + "; Tag: " + str(tag) + "; Pass: " + str(goodPart))
             part = Part(position_x, position_y, isCorrect=goodPart, description=tag)
             partList.append(part)
+    for part in partList:
+        img = cv.putText(img, part.description,(cropping_cx_straight[part.position_x-1] -50,cropping_cy_straight[part.position_y-1] +35),cv.FONT_HERSHEY_SIMPLEX ,0.3,(0,0,255),1,cv.LINE_AA)
     """
-    TODO: Write into Excel
+    TODO: Add demo_images folder
+    TODO: Writing into excel
     """
+    img_name = "./demo_images/opencv_frame_{}.png".format(tray_counter)
+    cv.imwrite(img_name, img)  
     return partList,collumnList
 
 def FeatureExtraction(img_rgb,contour_filter,contourList,tagList,isStraight,hole):
