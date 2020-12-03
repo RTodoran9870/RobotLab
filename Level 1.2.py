@@ -1,3 +1,4 @@
+  
 # -*- coding: utf-8 -*-
 """
 Created on Wed Nov 18 15:55:57 2020
@@ -176,10 +177,12 @@ def cropStraightImage(img):
     my_results=ResultsSave('group5_vision_result_t'+str(tray_counter)+'.csv','group5_plc_result_t'+str(tray_counter)+'.csv')
     for part in partList:
         my_results.insert_vision(tray_counter,part.position_x+3*(part.position_y-1),"straight",part.isCorrect,part.description)
-    #if Pass == False:
-     #   my_results.insert_plc(tray_counter,['10'])
-    #else:
-     #   my_results.insert_plc(tray_counter,['00'])
+        img = cv.putText(img, part.description,(cropping_cx_straight[part.position_x-1] -50,cropping_cy_straight[part.position_y-1] +35),cv.FONT_HERSHEY_SIMPLEX ,0.3,(0,0,255),1,cv.LINE_AA)
+    """
+    TODO: Add demo_images folder
+    """
+    img_name = "./demo_images/opencv_frame_{}.png".format(tray_counter)
+    cv.imwrite(img_name, img)
     return partList,Pass,my_results
     
 
@@ -374,4 +377,4 @@ while True and batch<=15:
 print("Inspection of all batches complete")
 
 # Clean up pins 
-GPIO.cleanup() 
+GPIO.cleanup()
