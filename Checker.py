@@ -14,8 +14,8 @@ from save_results import ResultsSave
 
 ds=12
 #Precalibrating ethalons
-minStraightArea = 6282.0
-minStraightPerimeter = 453.44
+minStraightArea = 5000
+minStraightPerimeter = 350
 minCurvedArea = 8879.5
 minCurvedPerimeter = 541.65
 ksize=3
@@ -25,13 +25,14 @@ kernel = np.ones((ksize,ksize),np.uint8)
 #Cropping settings
 cropping_cy_straight=[35,130,225,320]
 cropping_cy_length_straight=95
-cropping_cx_straight=[110,280,450]
-cropping_cx_length_straight=170
+cropping_cx_straight=[100,270,440]
+cropping_cx_length_straight=190
 
 cropping_cy_curved=[50,145,240,335]
 cropping_cy_length_curved=95
-cropping_cx_curved=[30,230,430]
-cropping_cx_length_curved=200
+cropping_cx_curved=[20,220,420]
+cropping_cx_length_curved=220
+
 
 #R.Pi pins and defaul states
 
@@ -140,11 +141,13 @@ def cropCurvedImage(img,isLeft):
             img_cropped=img[itemy:itemy+cropping_cy_length_curved,itemx:itemx+cropping_cx_length_curved]
             avg_color_per_row = np.average(img_cropped, axis=0)
             avg_color = np.average(avg_color_per_row, axis=0)
-            if avg_color[0]>80 and avg_color[1]>80 and avg_color[2]>80:
+            #if avg_color[0]>80 and avg_color[1]>80 and avg_color[2]>80:
+            if avg_color[0]>80 and avg_color[1]>70 and avg_color[2]>60:
                 tag, goodPart = Check(img_cropped,0,isLeft, not isLeft)
                 if goodPart == False:
                     Pass = False
             else:
+                print(avg_color)
                 tag="Empty"
                 goodPart = False
                 Pass = False
@@ -230,11 +233,12 @@ def FeatureExtraction(img_rgb,contour_filter,contourList,tagList,isStraight,hole
         
         if tag=="":
             if isStraight:
-                if area < 0.70 * minStraightArea and perimeter < 0.70 * minStraightPerimeter:
+                if area < 0.65 * minStraightArea and perimeter < 0.65 * minStraightPerimeter:
                     tag="Cut in half"
             else:
-                if area < 0.70 * minCurvedArea and perimeter < 0.90 * minCurvedPerimeter:
+                if area < 0.65 * minCurvedArea and perimeter < 0.85 * minCurvedPerimeter:
                     tag="Cut in half"
+                    print(area)
         
         if tag=="":
             for item in contourList:
@@ -277,6 +281,10 @@ def FilterContours(img_rgb,contours,hierarchy):
         if hierarchy[0][i][3]!=-1 and cv.contourArea(contour) > 100:
             hole=True
             cv.drawContours(img_contour, [contour], -1, (0,0,255), 2)
+    plt.figure(figsize = (ds,ds))
+    plt.imshow(img_contour)
+    plt.axis('off')
+    plt.show()
     return contour_filter, hole
 
 def getShape(img):
@@ -335,6 +343,10 @@ def getContour(img_rgb):
     img_grey_blur = cv.GaussianBlur(img_grey,(ksize,ksize),0)
     ret,img_otsu = cv.threshold(img_grey_blur,0,255,cv.THRESH_BINARY+cv.THRESH_OTSU)
     img_pro=cv.morphologyEx(img_otsu, cv.MORPH_OPEN, kernel)
+    plt.figure(figsize = (ds,ds))
+    plt.imshow(img_otsu)
+    plt.axis('off')
+    plt.show()
     return cv.findContours(img_pro,cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
 
 #Main Function
@@ -348,7 +360,7 @@ def Check(img, isStraight, isLeft, isRight):
     return FeatureExtraction(img_rgb,contour_filter,contourList,tagList,isStraight,hole)
 
 
- 
+"""
 for i in range (1):
    # Initialize pass value (default true)
    Pass=True
@@ -383,8 +395,10 @@ for i in range (1):
            #my_results.insert_plc(j,0)
            #my_results.insert_plc(i,['0001'])
        j+=1
+"""
+     
    
-   """ 
+""" 
    isStraight,isLeft,isRight = plsInput()
 
    #if(isStraight):
