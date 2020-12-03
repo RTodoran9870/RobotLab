@@ -9,6 +9,16 @@ import cv2 as cv
 
 cropping_cy_straight=[35,130,225,320]
 cropping_cy_length_straight=95
+cropping_cx_straight=[100,270,440]
+cropping_cx_length_straight=190
+
+cropping_cy_curved=[50,145,240,335]
+cropping_cy_length_curved=95
+cropping_cx_curved=[30,230,430]
+cropping_cx_length_curved=200
+"""
+cropping_cy_straight=[35,130,225,320]
+cropping_cy_length_straight=95
 cropping_cx_straight=[110,280,450]
 cropping_cx_length_straight=170
 
@@ -16,7 +26,7 @@ cropping_cy_curved=[50,145,240,335]
 cropping_cy_length_curved=95
 cropping_cx_curved=[30,230,430]
 cropping_cx_length_curved=200
-
+"""
 def testCamera(img):
     for itemx in cropping_cx_straight:
         for itemy in cropping_cy_straight:

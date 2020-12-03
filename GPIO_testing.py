@@ -25,12 +25,12 @@ GPIO.setup(20, GPIO.IN,  pull_up_down=GPIO.PUD_DOWN) # input2
 GPIO.setup(21, GPIO.IN,  pull_up_down=GPIO.PUD_DOWN) # input3
  
 #Set output pins
-GPIO.setup(5, GPIO.OUT, initial=1)    # Output 1
-GPIO.setup(12, GPIO.OUT, initial=1)    # Output 2
-GPIO.setup(6, GPIO.OUT, initial=1)    # Output 3
-GPIO.setup(13, GPIO.OUT, initial=1)    # Output 4 (Relay 1)
-GPIO.setup(19, GPIO.OUT, initial=1)    # Output 5 (Relay 2)
-GPIO.setup(16, GPIO.OUT, initial=1)    # Output 6 (Relay 3)
+GPIO.setup(5, GPIO.OUT, initial=0)    # Output 1
+GPIO.setup(12, GPIO.OUT, initial=0)    # Output 2
+GPIO.setup(6, GPIO.OUT, initial=0)    # Output 3
+GPIO.setup(13, GPIO.OUT, initial=0)    # Output 4 (Relay 1)
+GPIO.setup(19, GPIO.OUT, initial=0)    # Output 5 (Relay 2)
+GPIO.setup(16, GPIO.OUT, initial=0)    # Output 6 (Relay 3)
 
 
 def displayGPIO():
@@ -99,11 +99,16 @@ def plcInput(img_num):
 displayGPIO()
 
 sleep(2)
-GPIO.output(5, 0)     # Reset op1 to defaul low value
-GPIO.output(13, 0)
 
-displayGPIO()
 
+
+
+count=1
+while True:
+    displayGPIO()
+    sleep(2)
+    count+=1
+    print(count)
 
 # Clean up pins 
 GPIO.cleanup() 

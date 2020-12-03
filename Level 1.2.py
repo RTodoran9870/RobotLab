@@ -44,13 +44,17 @@ kernel = np.ones((ksize,ksize),np.uint8)
 #Cropping settings
 cropping_cy_straight=[35,130,225,320]
 cropping_cy_length_straight=95
+cropping_cx_straight=[100,270,440]
+cropping_cx_length_straight=190
+
+
+"""
+cropping_cy_straight=[35,130,225,320]
+cropping_cy_length_straight=95
 cropping_cx_straight=[110,280,450]
 cropping_cx_length_straight=170
+"""
 
-cropping_cy_curved=[50,145,240,335]
-cropping_cy_length_curved=95
-cropping_cx_curved=[30,230,430]
-cropping_cx_length_curved=200
 
 
 class Part:
@@ -79,30 +83,29 @@ def displayGPIO():
     pins_output_List.append(GPIO.input(16))
     print("Outputs: "+str(pins_output_List))
     
-    return 0
+    return pins_input_List,pins_output_List 
 
-def plcOutput(Pass):
+def plcOutput(Pass,batch,my_results):
+    sleep(2.5)
       
     if Pass:
         GPIO.output(5, 0)     # Passed batch - Op1 - high
-        GPIO.output(13, 0)     # Finished inspection on batch - Relay 1 - up
         print("Good batch")
-        
-        sleep(0.5)
-        
-        
-        
+             
     else:
         GPIO.output(5, 1)     # Failed batch - Op1 - low
-        GPIO.output(13, 0)     # Finished inspection on batch - Relay 1 - up
         print("Batch rejected")
     
-        sleep(0.5)
         
         
-    displayGPIO()
-    sleep(0.5)
+    GPIO.output(13, 0)     # Finished inspection on batch - Relay 1 - up    
+    pins_input_List,pins_output_List = displayGPIO()
+    response = str(pins_input_List)+str(pins_output_List)
+    #my_results=ResultsSave('group5_vision_result_t'+str(batch)+'.csv','group5_plc_result_t'+str(batch)+'.csv')
+    my_results.insert_plc(batch,response)
+    sleep(1)
     GPIO.output(13, 1)     # Reset relay to default low value
+    
     return 0
     
     
@@ -116,15 +119,19 @@ def plcInput(img_num):
         img=cv.imread("./group5_test_images/opencv_frame_"+str(img_num)+".png")     #Read captured image
         img_rgb = cv.cvtColor(img, cv.COLOR_BGR2RGB)
         
-        partList,Pass=cropStraightImage(img_rgb)
-        testCamera(img_rgb)
+        partList,Pass,my_results=cropStraightImage(img_rgb)
+        #testCamera(img_rgb)
 
         print(Pass)
-        plcOutput(Pass)
+        plcOutput(Pass,img_num,my_results)
         img_num+=1
     else:
-        print("Waiting for signal from PLC")
-    sleep(0.5) #time lag for cheching the message from PLC
+        print("Waiting for signal from PLC.")
+        sleep(0.25)
+        print("Waiting for signal from PLC..")
+        sleep(0.25)
+        print("Waiting for signal from PLC...")
+    #sleep(0.5) #time lag for cheching the message from PLC
     return img_num
 
 
@@ -169,11 +176,11 @@ def cropStraightImage(img):
     my_results=ResultsSave('group5_vision_result_t'+str(tray_counter)+'.csv','group5_plc_result_t'+str(tray_counter)+'.csv')
     for part in partList:
         my_results.insert_vision(tray_counter,part.position_x+3*(part.position_y-1),"straight",part.isCorrect,part.description)
-    if Pass == False:
-        my_results.insert_plc(tray_counter,['01'])
-    else:
-        my_results.insert_plc(tray_counter,['11'])
-    return partList,Pass
+    #if Pass == False:
+     #   my_results.insert_plc(tray_counter,['10'])
+    #else:
+     #   my_results.insert_plc(tray_counter,['00'])
+    return partList,Pass,my_results
     
 
 def captureImage(img_count):
@@ -352,8 +359,8 @@ def Check(img, isStraight, isLeft, isRight):
 
 
 # Call functions
-batch=4 
-while True and batch==4:
+batch=2 
+while True and batch<=15:
     k = cv.waitKey(5)
     
     if k%256 == 27:

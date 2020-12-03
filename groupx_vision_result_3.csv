@@ -1,0 +1,13 @@
+tray,part,type,description
+0,1,True,Good Part
+0,4,True,Good Part
+0,7,True,Good Part
+0,10,True,Good Part
+0,2,True,Good Part
+0,5,True,Good Part
+0,8,True,Good Part
+0,11,False,Empty
+0,3,True,Good Part
+0,6,True,Good Part
+0,9,False,Hole inside
+0,12,True,Good Part

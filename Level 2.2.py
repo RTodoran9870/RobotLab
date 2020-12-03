@@ -43,13 +43,13 @@ kernel = np.ones((ksize,ksize),np.uint8)
 #Cropping settings
 cropping_cy_straight=[35,130,225,320]
 cropping_cy_length_straight=95
-cropping_cx_straight=[110,280,450]
-cropping_cx_length_straight=170
+cropping_cx_straight=[100,270,440]
+cropping_cx_length_straight=190
 
 cropping_cy_curved=[50,145,240,335]
 cropping_cy_length_curved=95
-cropping_cx_curved=[30,230,430]
-cropping_cx_length_curved=200
+cropping_cx_curved=[20,220,420]
+cropping_cx_length_curved=220
 
 
 
@@ -82,7 +82,7 @@ def displayGPIO():
     return pins_input_List,pins_output_List
 
 def plcOutput(collumList,batch):
-     
+    sleep(2.5)   
     for coll_num in range(3):
         #Set bits corresponding to correct collumns
         if coll_num==0:
@@ -102,11 +102,13 @@ def plcOutput(collumList,batch):
             print("Collum {} has faulty parts".format(coll_num+1)) 
     
         
-    
-    sleep(0.5)        
+          
     GPIO.output(13, 0)     # Finished inspection on batch - Relay 1 - up  
     pins_input_List,pins_output_List = displayGPIO()
-    sleep(0.5)
+    response = str(pins_input_List)+str(pins_output_List)
+    my_results=ResultsSave('group5_vision_result_2t'+str(batch)+'.csv','group5_plc_result_2t'+str(batch)+'.csv')
+    my_results.insert_plc(batch,response)
+    sleep(1)
      
     #Reset GPIO pins for next batch
     GPIO.output(5, 1)     # Reset op1 to defaul low value
@@ -142,9 +144,13 @@ def plcInput(img_num):
         plcOutput(collumList,img_num)
         img_num+=1
     else:
-        print("Waiting for signal from PLC")
+        print("Waiting for signal from PLC.")
+        sleep(0.25)
+        print("Waiting for signal from PLC..")
+        sleep(0.25)
+        print("Waiting for signal from PLC...")
     
-    sleep(0.5) #time lag for cheching the message from PLC
+    #sleep(0.5) #time lag for cheching the message from PLC
     return img_num
 
 def cropStraightImage(img):
@@ -174,15 +180,16 @@ def cropStraightImage(img):
             print("Y: " + str(position_y) + "; X: " + str(position_x) + "; Tag: " + str(tag) + "; Pass: " + str(goodPart))
             part = Part(position_x, position_y, isCorrect=goodPart, description=tag)
             partList.append(part)
-    my_results=ResultsSave('group5_vision_result_t'+str(tray_counter)+'.csv','group5_plc_result_t'+str(tray_counter)+'.csv')
+    my_results=ResultsSave('group5_vision_result_2t'+str(tray_counter)+'.csv','group5_plc_result_2t'+str(tray_counter)+'.csv')
     for part in partList:
         my_results.insert_vision(tray_counter,part.position_x+3*(part.position_y-1),'straight',part.isCorrect,part.description)
-    response = ""
-    response = response + str(int(collumnList[0]==True))
-    response = response + str(int(collumnList[1]==True))
-    response = response + str(int(collumnList[2]==True))
-    response = response + "1"
-    my_results.insert_plc(tray_counter,[response])
+   
+    #response = ""
+    #response = response + str(int(collumnList[0]==True))
+    #response = response + str(int(collumnList[1]==True))
+    #response = response + str(int(collumnList[2]==True))
+    #response = response + "1"
+    #my_results.insert_plc(tray_counter,[response])
     return partList,collumnList
     
 def cropCurvedImage(img,isLeft):
@@ -212,7 +219,7 @@ def cropCurvedImage(img,isLeft):
             print("Y: " + str(position_y) + "; X: " + str(position_x) + "; Tag: " + str(tag) + "; Pass: " + str(goodPart))
             part = Part(position_x, position_y, isCorrect=goodPart, description=tag)
             partList.append(part)
-    my_results=ResultsSave('group5_vision_result_t'+str(tray_counter)+'.csv','group5_plc_result_t'+str(tray_counter)+'.csv')
+    my_results=ResultsSave('group5_vision_result_2t'+str(tray_counter)+'.csv','group5_plc_result_2t'+str(tray_counter)+'.csv')
     for part in partList:
         my_results.insert_vision(tray_counter,part.position_x+3*(part.position_y-1),'curved',part.isCorrect,part.description)
     response = ""
