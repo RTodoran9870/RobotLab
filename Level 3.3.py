@@ -240,10 +240,10 @@ def getShape(img):
 def readContours(isStraight):
     contourList = []
     if isStraight:
-        imgStraight = cv.imread("./shapes/straight_shape.png")
-        imgDefect1 = cv.imread("./shapes/straight_defect_1.png")
-        imgDefect2 = cv.imread("./shapes/straight_defect_2.png")
-        imgDefect3 = cv.imread("./shapes/straight_defect_3.png")
+        imgStraight = cv.imread("./shapes/Shapes_Moving/straight_shape.png")
+        imgDefect1 = cv.imread("./shapes/Shapes_Moving/straight_defect_1.png")
+        imgDefect2 = cv.imread("./shapes/Shapes_Moving/straight_defect_2.png")
+        imgDefect3 = cv.imread("./shapes/Shapes_Moving/straight_defect_3.png")
         straightContour = getShape(imgStraight)
         defect1Contour =  getShape(imgDefect1)
         defect2Contour = getShape(imgDefect2)
@@ -254,11 +254,11 @@ def readContours(isStraight):
         contourList.append(defect3Contour)
         tagList = ["Good Part", "Defect: Head Cut Off","Defect: Head Cut Off + Filled","Defect: Filled in"]
     else:
-        imgCurved = cv.imread("./shapes/curved_shape.png")
-        imgStraight = cv.imread("./shapes/straight_shape.png")
-        imgDefect1 = cv.imread("./shapes/curved_defect_1.png")
-        imgDefect2 = cv.imread("./shapes/curved_defect_2.png")
-        imgDefect3 = cv.imread("./shapes/curved_defect_3.png")
+        imgCurved = cv.imread("./shapes/Shapes_Moving/curved_shape.png")
+        imgStraight = cv.imread("./shapes/Shapes_Moving/straight_shape.png")
+        imgDefect1 = cv.imread("./shapes/Shapes_Moving/curved_defect_1.png")
+        imgDefect2 = cv.imread("./shapes/Shapes_Moving/curved_defect_2.png")
+        imgDefect3 = cv.imread("./shapes/Shapes_Moving/curved_defect_3.png")
         imgDefect3 = cv.flip(imgDefect3,0)
         
         
@@ -296,7 +296,7 @@ def Check(img, isStraight, isLeft, isRight):
 
 def readContoursType():
     contourList = []
-    imgCurved = cv.imread("./shapes/curved_shape.png")
+    imgCurved = cv.imread("./shapes/Shapes_Moving/curved_shape.png")
     imgStraight = cv.imread("./shapes/Shapes_Moving/straight_shape.jpeg")
         
         
