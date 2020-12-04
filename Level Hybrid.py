@@ -202,7 +202,7 @@ def plcInput(img_num):
     # If signal from plc recieved, begin inspection
     if GPIO.input(26):
         # Begin inspection on batct
-        partList = videoCapture()
+        partList = captureImage(img_num)
         
         print(partList)
         plcOutput(partList,img_num)   #Call plcOutput fn
@@ -402,15 +402,15 @@ def getShape(img):
         if hierarchy[0][i][3]==-1:
             return contour
 
-"""
+
 #Old shapes code for testing
 def readContours(isStraight):
     contourList = []
     if isStraight:
-        imgStraight = cv.imread("./shapes/straight_shape.jpeg")
-        imgDefect1 = cv.imread("./shapes/straight_defect_1.jpeg")
-        imgDefect2 = cv.imread("./shapes/straight_defect_2.jpeg")
-        imgDefect3 = cv.imread("./shapes/straight_defect_3.jpeg")
+        imgStraight = cv.imread("./shapes/straight_shape.ng")
+        imgDefect1 = cv.imread("./shapes/straight_defect_1.png")
+        imgDefect2 = cv.imread("./shapes/straight_defect_2.png")
+        imgDefect3 = cv.imread("./shapes/straight_defect_3.png")
         straightContour = getShape(imgStraight)
         defect1Contour =  getShape(imgDefect1)
         defect2Contour = getShape(imgDefect2)
@@ -421,11 +421,11 @@ def readContours(isStraight):
         contourList.append(defect3Contour)
         tagList = ["Good Part", "Defect: Head Cut Off","Defect: Head Cut Off + Filled","Defect: Filled in"]
     else:
-        imgCurved = cv.imread("./shapes/curved_shape.jpeg")
-        imgStraight = cv.imread("./shapes/straight_shape.jpeg")
-        imgDefect1 = cv.imread("./shapes/curved_defect_1.jpeg")
-        imgDefect2 = cv.imread("./shapes/curved_defect_2.jpeg")
-        imgDefect3 = cv.imread("./shapes/curved_defect_3.jpeg")
+        imgCurved = cv.imread("./shapes/curved_shape.png")
+        imgStraight = cv.imread("./shapes/straight_shape.png")
+        imgDefect1 = cv.imread("./shapes/curved_defect_1.png")
+        imgDefect2 = cv.imread("./shapes/curved_defect_2.png")
+        imgDefect3 = cv.imread("./shapes/curved_defect_3.png")
         imgDefect3 = cv.flip(imgDefect3,0)
         
         
@@ -483,7 +483,7 @@ def readContours(isStraight):
         
         tagList=["Good Part", "Defect: Wrong Shape","Defect: Filled in","Defect: Filled in + Head Cut off", "Defect: Head Cut off"]
     return contourList, tagList
-
+"""
 
 def getContour(img_rgb):
     img_grey = cv.cvtColor(img_rgb, cv.COLOR_RGB2GRAY)
@@ -504,8 +504,8 @@ def Check(img, isStraight, isLeft, isRight):
 
 def readContoursType():
     contourList = []
-    imgCurved = cv.imread("./shapes/Shapes_Moving/curved_shape.jpeg")
-    imgStraight = cv.imread("./shapes/Shapes_Moving/straight_shape.jpeg")
+    imgCurved = cv.imread("./shapes/curved_shape.png")
+    imgStraight = cv.imread("./shapes/straight_shape.png")
         
         
     curvedContour = getShape(imgCurved)
@@ -555,6 +555,51 @@ def CheckType(img):
         tag = "Curved"
     return(tag)
 
+def captureImage(img_count):
+    
+    cam = cv.VideoCapture(0)
+    cv.namedWindow("test")
+    img_counter = img_count
+
+
+    while True: 
+        ret, frame = cam.read()
+        #frame = cv.rotate(frame, cv2.ROTATE_90_CLOCKWISE) 
+        if not ret:
+            print("failed to grab frame")
+            break
+        cv.imshow("test", frame)
+        #out.write(frame)
+                
+        k = cv.waitKey(1)
+        if k%256 == 27:
+            # ESC pressed
+            print("Escape hit, closing...")
+            break
+        else:
+            # ESC not pressed
+            img_name = "./group5_demo_images/lvl2_tray_{}.png".format(img_counter)
+            cv.imwrite(img_name, frame)
+            print("{} written!".format(img_name))
+            
+            frame = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
+            if CheckType(frame) == "Straight":
+                partList = cropStraightImage(frame)
+            else:
+                partList = cropCurvedImage(frame,True)
+
+            # When everything done, release the capture
+            cap.release()
+            cv.destroyAllWindows()
+    
+            return partList
+            
+           
+    cam.release()
+    #out.release()
+    cv.destroyAllWindows()
+
+    return 0   
 
 def videoCapture():
     cap = cv.VideoCapture(0)

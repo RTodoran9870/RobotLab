@@ -7,30 +7,11 @@ Created on Wed Nov 18 15:55:57 2020
 import cv2 as cv
 import numpy as np
 from matplotlib import pyplot as plt
-from time import sleep
 from save_results import ResultsSave
+#from gpio import LED
+#from gpio import Button
 
-#Configure Raspberry Pi GPIO
 
-import RPi.GPIO as GPIO
-
-#Set GPIO port numbering
-GPIO.setmode(GPIO.BCM)               # BCM for GPIO numbering  
-
-#Set input pins
-GPIO.setup(26, GPIO.IN,  pull_up_down=GPIO.PUD_DOWN) # input1
-GPIO.setup(20, GPIO.IN,  pull_up_down=GPIO.PUD_DOWN) # input2
-GPIO.setup(21, GPIO.IN,  pull_up_down=GPIO.PUD_DOWN) # input3
- 
-#Set output pins
-GPIO.setup(5, GPIO.OUT, initial=1)    # Output 1
-GPIO.setup(12, GPIO.OUT, initial=1)    # Output 2
-GPIO.setup(6, GPIO.OUT, initial=1)    # Output 3
-GPIO.setup(13, GPIO.OUT, initial=1)    # Output 4 (Relay 1)
-GPIO.setup(19, GPIO.OUT, initial=1)    # Output 5 (Relay 2)
-GPIO.setup(16, GPIO.OUT, initial=1)    # Output 6 (Relay 3)
-
-tray_counter = 0
 ds=12
 #Precalibrating ethalons
 minStraightArea = 6282.0
@@ -44,16 +25,16 @@ kernel = np.ones((ksize,ksize),np.uint8)
 #Cropping settings
 cropping_cy_straight=[35,130,225,320]
 cropping_cy_length_straight=95
-cropping_cx_straight=[100,270,440]
-cropping_cx_length_straight=190
-
-
-"""
-cropping_cy_straight=[35,130,225,320]
-cropping_cy_length_straight=95
 cropping_cx_straight=[110,280,450]
 cropping_cx_length_straight=170
-"""
+
+cropping_cy_curved=[50,145,240,335]
+cropping_cy_length_curved=95
+cropping_cx_curved=[30,230,430]
+cropping_cx_length_curved=200
+
+#R.Pi pins and defaul states
+
 
 
 
@@ -64,78 +45,43 @@ class Part:
         self.isCorrect = isCorrect
         self.description = description
 
-def displayGPIO():
-    # Get input pin values and display them 
-    pins_input_List=[]
-    pins_input_List.append(GPIO.input(26))
-    pins_input_List.append(GPIO.input(20))
-    pins_input_List.append(GPIO.input(21))
-    print("Inputs: "+str(pins_input_List))
-    
-    # Get output pin values and display them
-    pins_output_List=[]
-    
-    pins_output_List.append(GPIO.input(5))
-    pins_output_List.append(GPIO.input(12))
-    pins_output_List.append(GPIO.input(6))
-    pins_output_List.append(GPIO.input(13))
-    pins_output_List.append(GPIO.input(19))
-    pins_output_List.append(GPIO.input(16))
-    print("Outputs: "+str(pins_output_List))
-    
-    return pins_input_List,pins_output_List 
 
-def plcOutput(Pass,batch):
-    sleep(1.5)
-      
+
+
+
+def plcOutput(Pass):
+    #Set R.P. pins as boolean outputs 
+    #bit1=LED(14,False)
+    #bit2=LED(15,False)
+    #bit3=LED(18,False)
+    #bit4=LED(23) 
+    
     if Pass:
-        GPIO.output(5, 0)     # Passed batch - Op1 - high
+        #bit1.on()
+        #bit2.off()
+        #bit3.off()
         print("Good batch")
-             
+        
     else:
-        GPIO.output(5, 1)     # Failed batch - Op1 - low
+        #bit1.off()
+        #bit2.off()
+        #bit3.off()
         print("Batch rejected")
-    
         
-        
-    GPIO.output(13, 0)     # Finished inspection on batch - Relay 1 - up    
-    pins_input_List,pins_output_List = displayGPIO()
-    response = str(pins_input_List)+str(pins_output_List)
-    my_results_plc=ResultsSave('group5_vision_result_dummy.csv','group5_plc_result_lvl1_tray'+str(batch)+'.csv')
-    my_results_plc.insert_plc(batch,response)
-    sleep(1)
-    GPIO.output(13, 1)     # Reset relay to default low value
-    
     return 0
     
     
-  
-def plcInput(img_num):
+"""   
+def plcInout():
+    #Set pins as boolean inputs
+    #bit1=Button(5,False)
+    #bit2=Button(6,False)
+    #bit3=Button(13,False)
     
-    if GPIO.input(26):
-        # Begin inspection on batch
-        Pass=True   # Initialize pass value (default true) 
-        captureImage(img_num)    #Call capture image fn
-        img=cv.imread("./group5_demo_images/lvl1_tray_"+str(img_num)+".png")     #Read captured image
-        #img=cv.imread("./group5_test_images/opencv_frame_"+str(img_num)+".png")     #Testing
-        img_rgb = cv.cvtColor(img, cv.COLOR_BGR2RGB)
-        
-        partList,Pass=cropStraightImage(img_rgb)
-        #testCamera(img_rgb)
-
-        print(Pass)
-        plcOutput(Pass,img_num)
-        img_num+=1
-    else:
-        print("Waiting for signal from PLC.")
-        sleep(0.25)
-        print("Waiting for signal from PLC..")
-        sleep(0.25)
-        print("Waiting for signal from PLC...")
-    #sleep(0.5) #time lag for cheching the message from PLC
-    return img_num
-
-
+    if():
+        return 
+    
+"""
 def testCamera(img):
     for itemx in cropping_cx_straight:
         for itemy in cropping_cy_straight:
@@ -146,15 +92,20 @@ def testCamera(img):
     plt.axis('off')
     plt.show()  
     
+def testCameraCurved(img):
+    for itemx in cropping_cx_curved:
+        for itemy in cropping_cy_curved:
+            img=cv.rectangle(img,(itemx,itemy),(itemx + cropping_cx_length_curved, itemy + cropping_cy_length_curved),(255,0,0),5)
+    plt.figure(figsize = (ds,ds))
+    plt.imshow(img)
+    plt.axis('off')
+    plt.show()
     
 def cropStraightImage(img):
-    global  tray_counter
-    tray_counter += 1
     partList = []
     position_x=0
     position_y=0
     Pass=True
-    img = cv.cvtColor(img, cv.COLOR_BGR2RGB)
     for itemx in cropping_cx_straight:
         position_x += 1
         for itemy in cropping_cy_straight:
@@ -163,7 +114,7 @@ def cropStraightImage(img):
             img_cropped=img[itemy:itemy+cropping_cy_length_straight,itemx:itemx+cropping_cx_length_straight]
             avg_color_per_row = np.average(img_cropped, axis=0)
             avg_color = np.average(avg_color_per_row, axis=0)
-            if avg_color[0]>75 and avg_color[1]>75 and avg_color[2]>75:
+            if avg_color[0]>80 and avg_color[1]>80 and avg_color[2]>80:
                 tag, goodPart = Check(img_cropped,1,0,0)
                 if goodPart == False:
                     Pass = False
@@ -174,23 +125,38 @@ def cropStraightImage(img):
             print("Y: " + str(position_y) + "; X: " + str(position_x) + "; Tag: " + str(tag) + "; Pass: " + str(goodPart))
             part = Part(position_x, position_y, isCorrect=goodPart, description=tag)
             partList.append(part)
-            
-    #Save results        
-    my_results_vision=ResultsSave('group5_vision_result_lvl1_tray'+str(tray_counter)+'.csv','group5_plc_result_dummy.csv')
-    for part in partList:
-        my_results_vision.insert_vision(tray_counter,part.position_x+3*(part.position_y-1),"straight",part.isCorrect,part.description)
-        img = cv.putText(img, part.description,(cropping_cx_straight[part.position_x-1] +20,cropping_cy_straight[part.position_y-1] + 20 ),cv.FONT_HERSHEY_SIMPLEX ,0.3,(0,0,255),1,cv.LINE_AA)
-   
-    #Annotate and save image    
-    img_name = "./group5_demo_images/lvl1_tray_{}_annotated.png".format(tray_counter)
-    cv.imwrite(img_name, img)   
-    return partList,Pass
+    return partList, Pass
     
+def cropCurvedImage(img,isLeft):
+    partList=[]
+    position_x=0
+    position_y=0
+    Pass=True
+    for itemx in cropping_cx_curved:
+        position_x += 1
+        for itemy in cropping_cy_curved:
+            position_y %= 4
+            position_y += 1
+            img_cropped=img[itemy:itemy+cropping_cy_length_curved,itemx:itemx+cropping_cx_length_curved]
+            avg_color_per_row = np.average(img_cropped, axis=0)
+            avg_color = np.average(avg_color_per_row, axis=0)
+            if avg_color[0]>80 and avg_color[1]>80 and avg_color[2]>80:
+                tag, goodPart = Check(img_cropped,0,isLeft, not isLeft)
+                if goodPart == False:
+                    Pass = False
+            else:
+                tag="Empty"
+                goodPart = False
+                Pass = False
+            print("Y: " + str(position_y) + "; X: " + str(position_x) + "; Tag: " + str(tag) + "; Pass: " + str(goodPart))
+            part = Part(position_x, position_y, isCorrect=goodPart, description=tag)
+            partList.append(part)
+    return partList, Pass
 
 def captureImage(img_count):
     
     cam = cv.VideoCapture(0)
-    cv.namedWindow("batch{}".format(img_count))
+    cv.namedWindow("test")
     img_counter = img_count
 
 
@@ -200,7 +166,7 @@ def captureImage(img_count):
         if not ret:
             print("failed to grab frame")
             break
-        cv.imshow("batch"+str(img_count), frame)
+        cv.imshow("test", frame)
         #out.write(frame)
                 
         k = cv.waitKey(1)
@@ -208,9 +174,9 @@ def captureImage(img_count):
             # ESC pressed
             print("Escape hit, closing...")
             break
-        else:
-            # ESC not pressed
-            img_name = "./group5_demo_images/lvl1_tray_{}.png".format(img_counter)
+        elif k%256 == 32:
+            # SPACE pressed
+            img_name = "./group5_test_images/opencv_frame_{}.png".format(img_counter)
             cv.imwrite(img_name, frame)
             print("{} written!".format(img_name))
             
@@ -228,7 +194,6 @@ def captureImage(img_count):
 
         
 def FeatureExtraction(img_rgb,contour_filter,contourList,tagList,isStraight,hole):
-    global tray_counter
     img_feature=img_rgb.copy()
     
     #for i,contour in enumerate(contour_filter):
@@ -265,7 +230,7 @@ def FeatureExtraction(img_rgb,contour_filter,contourList,tagList,isStraight,hole
         
         if tag=="":
             if isStraight:
-                if area < 0.8 * minStraightArea and perimeter < 0.8 * minStraightPerimeter:
+                if area < 0.70 * minStraightArea and perimeter < 0.70 * minStraightPerimeter:
                     tag="Cut in half"
             else:
                 if area < 0.70 * minCurvedArea and perimeter < 0.90 * minCurvedPerimeter:
@@ -283,7 +248,14 @@ def FeatureExtraction(img_rgb,contour_filter,contourList,tagList,isStraight,hole
             else:
                 tag=tagList[np.argmin(match_score_list)]
     
+        img = cv.putText(img_feature,tag,(cx-50,cy+35),cv.FONT_HERSHEY_SIMPLEX ,0.3,(0,0,255),1,cv.LINE_AA)
+        
     
+    # Display extracted features
+    #plt.figure(figsize = (ds,ds))
+    #plt.imshow(img_feature)
+    #plt.axis('off')
+    #plt.show()    
     if tag == "Good Part":
         goodPart = True
     else:
@@ -334,7 +306,28 @@ def readContours(isStraight):
         contourList.append(defect2Contour)
         contourList.append(defect3Contour)
         tagList = ["Good Part", "Defect: Head Cut Off","Defect: Head Cut Off + Filled","Defect: Filled in"]
-    
+    else:
+        imgCurved = cv.imread("./shapes/curved_shape.png")
+        imgStraight = cv.imread("./shapes/straight_shape.png")
+        imgDefect1 = cv.imread("./shapes/curved_defect_1.png")
+        imgDefect2 = cv.imread("./shapes/curved_defect_2.png")
+        imgDefect3 = cv.imread("./shapes/curved_defect_3.png")
+        imgDefect3 = cv.flip(imgDefect3,0)
+        
+        
+        curvedContour = getShape(imgCurved)
+        straightContour = getShape(imgStraight)
+        defect1Contour =  getShape(imgDefect1)
+        defect2Contour = getShape(imgDefect2)
+        defect3Contour = getShape(imgDefect3)
+        
+        contourList.append(curvedContour)
+        contourList.append(straightContour)
+        contourList.append(defect1Contour)
+        contourList.append(defect2Contour)
+        contourList.append(defect3Contour)
+        
+        tagList=["Good Part", "Defect: Wrong Shape","Defect: Filled in","Defect: Filled in + Head Cut off", "Defect: Head Cut off"]
     return contourList, tagList
 
 def getContour(img_rgb):
@@ -355,22 +348,51 @@ def Check(img, isStraight, isLeft, isRight):
     return FeatureExtraction(img_rgb,contour_filter,contourList,tagList,isStraight,hole)
 
 
+ 
+for i in range (1):
+   # Initialize pass value (default true)
+   Pass=True
+   my_results=ResultsSave('groupx_vision_result_3.csv','groupx_plc_result_.3.csv')
+   shuttle_list=['curved']
+   j=0
+           
+       
+   num=3
+   #captureImage(i+num)
+   #img=cv.imread("./group5_test_images/opencv_frame_"+str(i+num)+".png") 
+   img=cv.imread("./images/group5_defects_2/opencv_frame_"+str(i+num)+".png")
+   img_rgb = cv.cvtColor(img, cv.COLOR_BGR2RGB)
+   print("image read")
+   plt.figure(figsize = (ds,ds))
+   plt.imshow(img_rgb)
+   plt.axis('off')
+   plt.show()       
+   print("------------------------------------")
+   
+   #Pass=cropStraightImage(img_rgb)
+   partList, Pass=cropCurvedImage(img_rgb, True)
+   #testCamera(img_rgb)
+   testCameraCurved(img_rgb)
+   print("Pass: ",Pass)
+   plcOutput(Pass)
+   
+   
+   while j<len(shuttle_list):
+       for part in partList:
+           my_results.insert_vision(j,part.position_x+3*(part.position_y-1),part.isCorrect,part.description)
+           #my_results.insert_plc(j,0)
+           #my_results.insert_plc(i,['0001'])
+       j+=1
+   
+   """ 
+   isStraight,isLeft,isRight = plsInput()
 
-
-# Call functions
-batch=3 
-while True and batch<=25:
-    k = cv.waitKey(5)
-    
-    if k%256 == 27:
-        # ESC pressed
-        print("Escape hit, closing...")
-        break
-    
-    else:
-        batch = plcInput(batch)
-
-print("Inspection of all batches complete")
-
-# Clean up pins 
-GPIO.cleanup() 
+   #if(isStraight):
+       #Pass=cropStraightImage(img_rgb)
+    elif(isLeft):
+        Pass=cropCurvedImage(img_rgb, True)
+    elif(isRight):   
+        Pass=cropCurvedImage(img_rgb, False)
+        
+"""    
+      

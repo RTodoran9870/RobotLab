@@ -85,11 +85,11 @@ def plcOutput(collumList,batch):
     sleep(1.5)   
     for coll_num in range(3):
         #Set quality bits corresponding to correct collumns
-        if coll_num==0:
+        if coll_num==2:
             pin=5
         elif coll_num==1: 
             pin=12
-        elif coll_num==2: 
+        elif coll_num==0: 
             pin=6
             
         collum=collumList[coll_num]
@@ -108,7 +108,7 @@ def plcOutput(collumList,batch):
     # Save results
     pins_input_List,pins_output_List = displayGPIO()
     response = str(pins_input_List)+str(pins_output_List)
-    my_results_plc=ResultsSave('group5_vision_result_dummy.csv','group5_plc_result_lvl2'+str(batch)+'.csv')
+    my_results_plc=ResultsSave('group5_vision_result_dummy.csv','group5_plc_result_lvl2_tray'+str(batch)+'.csv')
     my_results_plc.insert_plc(batch,response)
      
     #Reset GPIO pins for next batch
@@ -125,7 +125,7 @@ def plcInput(img_num):
         # Initialize pass value (default true) 
         collumList = [True,True,True] # initialise collum list with defaul good parts
         captureImage(img_num)    #Call capture image fn
-        img=cv.imread("./group5_demo_images/lvl2_tray"+str(img_num)+".png")     #Read captured image
+        img=cv.imread("./group5_demo_images/lvl2_tray_"+str(img_num)+".png")     #Read captured image
         #img=cv.imread("./group5_test_images/opencv_frame_"+str(img_num)+".png")     #Testing
         img_rgb = cv.cvtColor(img, cv.COLOR_BGR2RGB)
         
@@ -179,10 +179,10 @@ def cropStraightImage(img):
             print("Y: " + str(position_y) + "; X: " + str(position_x) + "; Tag: " + str(tag) + "; Pass: " + str(goodPart))
             part = Part(position_x, position_y, isCorrect=goodPart, description=tag)
             partList.append(part)
-    my_results_vision=ResultsSave('group5_vision_result_lvl2'+str(tray_counter)+'.csv','group5_plc_result_dummy.csv')
+    my_results_vision=ResultsSave('group5_vision_result_lvl2_tray'+str(tray_counter)+'.csv','group5_plc_result_dummy.csv')
     for part in partList:
         my_results_vision.insert_vision(tray_counter,part.position_x+3*(part.position_y-1),'straight',part.isCorrect,part.description)
-        img = cv.putText(img, part.description,(cropping_cx_straight[part.position_x-1] -50,cropping_cy_straight[part.position_y-1] +35),cv.FONT_HERSHEY_SIMPLEX ,0.3,(0,0,255),1,cv.LINE_AA)
+        img = cv.putText(img, part.description,(cropping_cx_straight[part.position_x-1] +20,cropping_cy_straight[part.position_y-1]+20 ),cv.FONT_HERSHEY_SIMPLEX ,0.3,(0,0,255),1,cv.LINE_AA)
     
     #Annotate and save image    
     img_name = "./group5_demo_images/lvl2_tray_{}_annotated.png".format(tray_counter)
@@ -206,7 +206,7 @@ def cropCurvedImage(img,isLeft):
             img_cropped=img[itemy:itemy+cropping_cy_length_curved,itemx:itemx+cropping_cx_length_curved]
             avg_color_per_row = np.average(img_cropped, axis=0)
             avg_color = np.average(avg_color_per_row, axis=0)
-            if avg_color[0]>80 and avg_color[1]>80 and avg_color[2]>80:
+            if avg_color[0]>75 and avg_color[1]>75 and avg_color[2]>75:
                 tag, goodPart = Check(img_cropped,0,isLeft, not isLeft)
                 if goodPart == False:
                     collumnList[position_x-1]=False
@@ -218,10 +218,10 @@ def cropCurvedImage(img,isLeft):
             part = Part(position_x, position_y, isCorrect=goodPart, description=tag)
             partList.append(part)
     # Save results
-    my_results=ResultsSave('group5_vision_result_lvl2'+str(tray_counter)+'.csv','group5_plc_result_dummy.csv')
+    my_results=ResultsSave('group5_vision_result_lvl2_tray'+str(tray_counter)+'.csv','group5_plc_result_dummy.csv')
     for part in partList:
         my_results.insert_vision(tray_counter,part.position_x+3*(part.position_y-1),'curved',part.isCorrect,part.description)
-        img = cv.putText(img, part.description,(cropping_cx_straight[part.position_x-1] -50,cropping_cy_straight[part.position_y-1] +35),cv.FONT_HERSHEY_SIMPLEX ,0.3,(0,0,255),1,cv.LINE_AA)
+        img = cv.putText(img, part.description,(cropping_cx_straight[part.position_x-1] +20,cropping_cy_straight[part.position_y-1]+20 ),cv.FONT_HERSHEY_SIMPLEX ,0.3,(0,0,255),1,cv.LINE_AA)
     
     #Annotate and save image    
     img_name = "./group5_demo_images/lvl2_tray_{}_annotated.png".format(tray_counter)
@@ -303,7 +303,7 @@ def FeatureExtraction(img_rgb,contour_filter,contourList,tagList,isStraight,hole
         
         if tag=="":
             if isStraight:
-                if area < 0.70 * minStraightArea and perimeter < 0.70 * minStraightPerimeter:
+                if area < 0.70 * minStraightArea and perimeter < 0.75 * minStraightPerimeter:
                     tag="Cut in half"
             else:
                 if area < 0.70 * minCurvedArea and perimeter < 0.90 * minCurvedPerimeter:
@@ -413,11 +413,10 @@ def Check(img, isStraight, isLeft, isRight):
     return FeatureExtraction(img_rgb,contour_filter,contourList,tagList,isStraight,hole)
 
 
- 
 
 # Call functions
-batch=1 
-while True and batch<=20:
+batch=5 
+while True and batch<=30:
     k = cv.waitKey(5)
     
     if k%256 == 27:
@@ -433,4 +432,3 @@ print("Inspection of all batches complete")
 # Clean up pins 
 GPIO.cleanup() 
 
-     
