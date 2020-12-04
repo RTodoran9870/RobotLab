@@ -1,0 +1,13 @@
+tray,part,type,is good?,description
+4,1,curved,False,Cut in half
+4,4,curved,False,Cut in half
+4,7,curved,False,Hole inside
+4,10,curved,False,Defect: Wrong Shape
+4,2,curved,True,Good Part
+4,5,curved,True,Good Part
+4,8,curved,True,Good Part
+4,11,curved,True,Good Part
+4,3,curved,True,Good Part
+4,6,curved,True,Good Part
+4,9,curved,True,Good Part
+4,12,curved,True,Good Part

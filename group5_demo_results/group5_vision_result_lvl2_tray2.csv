@@ -1,0 +1,13 @@
+tray,part,type,is good?,description
+2,1,curved,True,Good Part
+2,4,curved,True,Good Part
+2,7,curved,False,Defect: Head Cut off
+2,10,curved,True,Good Part
+2,2,curved,True,Good Part
+2,5,curved,False,Cut in half
+2,8,curved,True,Good Part
+2,11,curved,True,Good Part
+2,3,curved,False,Empty
+2,6,curved,False,Cut in half
+2,9,curved,False,Hole inside
+2,12,curved,False,Defect: Head Cut off

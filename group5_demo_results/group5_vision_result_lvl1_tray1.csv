@@ -1,0 +1,13 @@
+tray,part,type,is good?,description
+1,1,straight,True,Good Part
+1,4,straight,True,Good Part
+1,7,straight,False,Cut in half
+1,10,straight,True,Good Part
+1,2,straight,True,Good Part
+1,5,straight,False,Cut in half
+1,8,straight,True,Good Part
+1,11,straight,False,Defect: Head Cut Off + Filled
+1,3,straight,False,Hole inside
+1,6,straight,True,Good Part
+1,9,straight,False,Defect: Head Cut Off
+1,12,straight,True,Good Part
